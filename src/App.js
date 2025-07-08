@@ -82,7 +82,7 @@ function App() {
                   All our items are handmade in Cape Town, South Africa and we have been successfully selling online since 2019.
                 </p>
                 <p>
-                  Should you not find an item that is 100% to your liking or colour scheme, we are more
+                  Should you not find an item that is 100% to your liking or colour scheme, we are more than willing to adjust our colours, fonts and themes to suit your specific needs. Just communicate this in the notes section on checkout.
                 </p>
               </section>
           </div>
