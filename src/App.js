@@ -148,7 +148,7 @@ function App() {
           </a>
         </div>
         <p className="footer__copy">
-          © 2025, Hope‑in‑Hearts Nursery Decor Powered by Hope-in-Hearts-Development
+          © 2026, Hope‑in‑Hearts Nursery Decor Powered by Hope-in-Hearts-Development
         </p>
       </footer>
     </div>
