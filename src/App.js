@@ -137,7 +137,7 @@ function App() {
 
       </main>
 
-      {/* FOOTER */}
+      {/* FOOTER */} 
       <footer className="footer">
         <div className="footer__social">
           <a href="https://facebook.com/yourpage" target="_blank" rel="noopener noreferrer">
