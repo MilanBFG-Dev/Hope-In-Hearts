@@ -1,16 +1,16 @@
 {
   "files": {
-    "main.css": "/Hope-In-Hearts/static/css/main.e8ada9c5.css",
-    "main.js": "/Hope-In-Hearts/static/js/main.f7991cd6.js",
-    "static/js/453.c1c35239.chunk.js": "/Hope-In-Hearts/static/js/453.c1c35239.chunk.js",
-    "static/media/logo.png": "/Hope-In-Hearts/static/media/logo.bbf8ebe39fd4f67a0677.png",
-    "index.html": "/Hope-In-Hearts/index.html",
-    "main.e8ada9c5.css.map": "/Hope-In-Hearts/static/css/main.e8ada9c5.css.map",
-    "main.f7991cd6.js.map": "/Hope-In-Hearts/static/js/main.f7991cd6.js.map",
-    "453.c1c35239.chunk.js.map": "/Hope-In-Hearts/static/js/453.c1c35239.chunk.js.map"
+    "main.css": "/github.io/Hope-In-Hearts/static/css/main.e8ada9c5.css",
+    "main.js": "/github.io/Hope-In-Hearts/static/js/main.91155386.js",
+    "static/js/453.c1c35239.chunk.js": "/github.io/Hope-In-Hearts/static/js/453.c1c35239.chunk.js",
+    "static/media/logo.png": "/github.io/Hope-In-Hearts/static/media/logo.bbf8ebe39fd4f67a0677.png",
+    "index.html": "/github.io/Hope-In-Hearts/index.html",
+    "main.e8ada9c5.css.map": "/github.io/Hope-In-Hearts/static/css/main.e8ada9c5.css.map",
+    "main.91155386.js.map": "/github.io/Hope-In-Hearts/static/js/main.91155386.js.map",
+    "453.c1c35239.chunk.js.map": "/github.io/Hope-In-Hearts/static/js/453.c1c35239.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.e8ada9c5.css",
-    "static/js/main.f7991cd6.js"
+    "static/js/main.91155386.js"
   ]
 }
