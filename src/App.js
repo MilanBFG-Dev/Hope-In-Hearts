@@ -147,7 +147,7 @@ function App() {
             <InstagramIcon fontSize="large" />
           </a>
         </div>
-        <p className="footer__copy">
+        <p className="footer__copy"> 
           © 2026, Hope‑in‑Hearts Nursery Decor Powered by Hope-in-Hearts-Development
         </p>
       </footer>
