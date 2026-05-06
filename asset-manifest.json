@@ -1,16 +1,16 @@
 {
   "files": {
-    "main.css": "/Hope-In-Hearts/static/css/main.e8ada9c5.css",
-    "main.js": "/Hope-In-Hearts/static/js/main.993b3bc4.js",
-    "static/js/453.c1c35239.chunk.js": "/Hope-In-Hearts/static/js/453.c1c35239.chunk.js",
-    "static/media/logo.png": "/Hope-In-Hearts/static/media/logo.bbf8ebe39fd4f67a0677.png",
-    "index.html": "/Hope-In-Hearts/index.html",
-    "main.e8ada9c5.css.map": "/Hope-In-Hearts/static/css/main.e8ada9c5.css.map",
-    "main.993b3bc4.js.map": "/Hope-In-Hearts/static/js/main.993b3bc4.js.map",
-    "453.c1c35239.chunk.js.map": "/Hope-In-Hearts/static/js/453.c1c35239.chunk.js.map"
+    "main.css": "/static/css/main.e8ada9c5.css",
+    "main.js": "/static/js/main.631deec1.js",
+    "static/js/453.c1c35239.chunk.js": "/static/js/453.c1c35239.chunk.js",
+    "static/media/logo.png": "/static/media/logo.bbf8ebe39fd4f67a0677.png",
+    "index.html": "/index.html",
+    "main.e8ada9c5.css.map": "/static/css/main.e8ada9c5.css.map",
+    "main.631deec1.js.map": "/static/js/main.631deec1.js.map",
+    "453.c1c35239.chunk.js.map": "/static/js/453.c1c35239.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.e8ada9c5.css",
-    "static/js/main.993b3bc4.js"
+    "static/js/main.631deec1.js"
   ]
 }
