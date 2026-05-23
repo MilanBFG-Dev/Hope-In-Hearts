@@ -969,6 +969,46 @@
   color: var(--ink);
 }
 
+.cart-footer__heading {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--ink);
+  margin: 0 0 0.75rem;
+  text-align: left;
+}
+
+.cart-customer-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  margin-bottom: 0.75rem;
+}
+
+.cart-field .option-input {
+  background: var(--white);
+}
+
+.cart-error {
+  margin: 0 0 0.75rem;
+  padding: 0.65rem 0.85rem;
+  background: #fff0f0;
+  border: 1px solid #f5c6c6;
+  border-radius: var(--radius);
+  color: #9b4444;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  text-align: left;
+}
+
+.order-success-card__ref {
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+  margin: 0 0 0.5rem;
+}
+
 .cart-note-label {
   display: block;
   font-size: 0.75rem;

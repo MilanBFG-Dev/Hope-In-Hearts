@@ -99,4 +99,13 @@ export const PRODUCTS = [
   },
 ];
 
-export const ORDER_EMAIL = 'milangenade116@gmail.com';
+/** Hope in Hearts — https://www.hopeinhearts.co.za/ */
+export const BUSINESS = {
+  name: 'Hope in Hearts Nursery Décor',
+  website: 'https://www.hopeinhearts.co.za/',
+  email: 'milangenade116@gmail.com',
+  phone: '084 655 4902',
+};
+
+/** All orders are sent to this inbox */
+export const ORDER_EMAIL = BUSINESS.email;

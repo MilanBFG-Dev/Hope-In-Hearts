@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import './App.css';
 import Logo from './Images/logo.png';
-import { PRODUCTS, ORDER_EMAIL } from './data/products';
-import { openOrderEmail } from './utils/orderEmail';
+import { PRODUCTS, ORDER_EMAIL, BUSINESS } from './data/products';
+import { sendOrderEmail, isValidEmail } from './utils/orderEmail';
 
 import MenuIcon from '@mui/icons-material/Menu';
 import CloseIcon from '@mui/icons-material/Close';
@@ -29,7 +29,13 @@ function App() {
   const [cartOpen, setCartOpen] = useState(false);
   const [orderNote, setOrderNote] = useState('');
   const [orderSuccess, setOrderSuccess] = useState(null);
+  const [orderError, setOrderError] = useState('');
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+  const [customerDetails, setCustomerDetails] = useState({
+    name: '',
+    email: '',
+    phone: '',
+  });
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [logoFailed, setLogoFailed] = useState(false);
@@ -129,28 +135,60 @@ function App() {
 
   const cartTotal = cart.reduce((s, i) => s + i.price * i.quantity, 0);
 
-  const placeOrder = () => {
+  const placeOrder = async () => {
     if (!cart.length || isPlacingOrder) return;
 
+    const name = customerDetails.name.trim();
+    const email = customerDetails.email.trim();
+    const phone = customerDetails.phone.trim();
+
+    if (!name) {
+      setOrderError('Please enter your name so we know who to reply to.');
+      return;
+    }
+    if (!email || !isValidEmail(email)) {
+      setOrderError('Please enter a valid email address.');
+      return;
+    }
+
+    setOrderError('');
     setIsPlacingOrder(true);
+
     const orderSnapshot = [...cart];
     const noteSnapshot = orderNote;
-    const itemCount = orderSnapshot.reduce((n, i) => n + i.quantity, 0);
-    const totalSnapshot = orderSnapshot.reduce((s, i) => s + i.price * i.quantity, 0);
+    const customerSnapshot = { name, email, phone };
 
-    const { opened, error } = openOrderEmail(ORDER_EMAIL, orderSnapshot, noteSnapshot);
+    const result = await sendOrderEmail(
+      ORDER_EMAIL,
+      orderSnapshot,
+      noteSnapshot,
+      customerSnapshot
+    );
+
+    if (!result.sent) {
+      setIsPlacingOrder(false);
+      setOrderError(
+        result.error === 'mailto_blocked'
+          ? 'Could not open your email app. Please email us directly at ' + ORDER_EMAIL
+          : 'Could not send your order. Please try again or email us at ' + ORDER_EMAIL
+      );
+      return;
+    }
 
     setCart([]);
     setOrderNote('');
+    setCustomerDetails({ name: '', email: '', phone: '' });
     setCartOpen(false);
     setIsPlacingOrder(false);
 
     setOrderSuccess({
-      itemCount,
-      total: totalSnapshot,
+      itemCount: result.itemCount,
+      total: result.total,
       email: ORDER_EMAIL,
-      mailOpened: opened,
-      error,
+      orderRef: result.orderRef,
+      method: result.method,
+      sent: result.sent,
+      error: result.error,
     });
   };
 
@@ -352,16 +390,20 @@ function App() {
                 <div className="info-content slide-up">
                   <h2>Contact</h2>
                   <div className="contact-block">
-                    <h3>Email</h3>
-                    <a href="mailto:hopeinheartsdecor@gmail.com">hopeinheartsdecor@gmail.com</a>
+                    <h3>Website</h3>
+                    <a href={BUSINESS.website} target="_blank" rel="noopener noreferrer">
+                      hopeinhearts.co.za
+                    </a>
                   </div>
                   <div className="contact-block">
-                    <h3>Orders</h3>
+                    <h3>Email & orders</h3>
                     <a href={`mailto:${ORDER_EMAIL}`}>{ORDER_EMAIL}</a>
                   </div>
                   <div className="contact-block">
                     <h3>Phone or WhatsApp</h3>
-                    <a href="tel:+27846554902">084 655 4902</a>
+                    <a href={`tel:+27${BUSINESS.phone.replace(/\s/g, '').replace(/^0/, '')}`}>
+                      {BUSINESS.phone}
+                    </a>
                   </div>
                   <p className="contact-note">
                     We&apos;re based in Durbanville, Cape Town — collection is welcome.
@@ -632,6 +674,59 @@ function App() {
                   <span>Estimated total</span>
                   <strong>R{cartTotal}</strong>
                 </div>
+
+                <p className="cart-footer__heading">Your details</p>
+                <div className="cart-customer-fields">
+                  <div className="cart-field">
+                    <label className="cart-note-label" htmlFor="customer-name">
+                      Full name *
+                    </label>
+                    <input
+                      id="customer-name"
+                      type="text"
+                      className="option-input"
+                      placeholder="Your name"
+                      value={customerDetails.name}
+                      onChange={(e) =>
+                        setCustomerDetails((d) => ({ ...d, name: e.target.value }))
+                      }
+                      autoComplete="name"
+                    />
+                  </div>
+                  <div className="cart-field">
+                    <label className="cart-note-label" htmlFor="customer-email">
+                      Email *
+                    </label>
+                    <input
+                      id="customer-email"
+                      type="email"
+                      className="option-input"
+                      placeholder="you@email.com"
+                      value={customerDetails.email}
+                      onChange={(e) =>
+                        setCustomerDetails((d) => ({ ...d, email: e.target.value }))
+                      }
+                      autoComplete="email"
+                    />
+                  </div>
+                  <div className="cart-field">
+                    <label className="cart-note-label" htmlFor="customer-phone">
+                      Phone / WhatsApp
+                    </label>
+                    <input
+                      id="customer-phone"
+                      type="tel"
+                      className="option-input"
+                      placeholder="084 000 0000"
+                      value={customerDetails.phone}
+                      onChange={(e) =>
+                        setCustomerDetails((d) => ({ ...d, phone: e.target.value }))
+                      }
+                      autoComplete="tel"
+                    />
+                  </div>
+                </div>
+
                 <label className="cart-note-label" htmlFor="order-note">
                   Extra notes (optional)
                 </label>
@@ -643,9 +738,11 @@ function App() {
                   value={orderNote}
                   onChange={(e) => setOrderNote(e.target.value)}
                 />
+                {orderError && <p className="cart-error">{orderError}</p>}
                 <p className="cart-footer__note">
-                  Tap below to open your email app with your order ready to send. Payment is
-                  arranged after we confirm with you.
+                  {process.env.REACT_APP_WEB3FORMS_ACCESS_KEY
+                    ? `Your order will be sent directly to Hope in Hearts. We will reply to confirm payment and delivery.`
+                    : `Your email app will open with your order addressed to Hope in Hearts (${ORDER_EMAIL}). Tap Send to complete.`}
                 </p>
                 <button
                   type="button"
@@ -654,7 +751,11 @@ function App() {
                   disabled={isPlacingOrder}
                 >
                   <EmailOutlinedIcon fontSize="small" />
-                  {isPlacingOrder ? 'Opening email…' : `Place order via email`}
+                  {isPlacingOrder
+                    ? 'Sending order…'
+                    : process.env.REACT_APP_WEB3FORMS_ACCESS_KEY
+                      ? 'Place order'
+                      : 'Place order via email'}
                 </button>
               </div>
             </>
@@ -683,21 +784,44 @@ function App() {
               </span>
             </div>
             <h2 id="order-success-title">Thank you!</h2>
-            <p className="order-success-card__lead">Your order is ready to send</p>
+            <p className="order-success-card__ref">Order {orderSuccess.orderRef}</p>
+            <p className="order-success-card__lead">
+              {orderSuccess.method === 'web3forms' && orderSuccess.sent
+                ? 'Your order has been sent'
+                : orderSuccess.sent
+                  ? 'Your order is ready to send'
+                  : 'Something went wrong'}
+            </p>
             <p className="order-success-card__detail">
-              {orderSuccess.mailOpened ? (
+              {orderSuccess.method === 'web3forms' && orderSuccess.sent ? (
                 <>
-                  Your email app should have opened with{' '}
+                  We&apos;ve sent your order for{' '}
+                  <strong>
+                    {orderSuccess.itemCount} item{orderSuccess.itemCount !== 1 ? 's' : ''}
+                  </strong>{' '}
+                  (R{orderSuccess.total}) to{' '}
+                  <a href={BUSINESS.website} target="_blank" rel="noopener noreferrer">
+                    Hope in Hearts
+                  </a>{' '}
+                  (<a href={`mailto:${orderSuccess.email}`}>{orderSuccess.email}</a>). We&apos;ll
+                  reply shortly to confirm payment and delivery.
+                </>
+              ) : orderSuccess.sent ? (
+                <>
+                  Your email app should have opened with a formatted order for{' '}
                   <strong>
                     {orderSuccess.itemCount} item{orderSuccess.itemCount !== 1 ? 's' : ''}
                   </strong>{' '}
                   (R{orderSuccess.total}) addressed to{' '}
-                  <a href={`mailto:${orderSuccess.email}`}>{orderSuccess.email}</a>.
-                  Please tap <strong>Send</strong> in your mail app to complete your order.
+                  <a href={BUSINESS.website} target="_blank" rel="noopener noreferrer">
+                    Hope in Hearts
+                  </a>{' '}
+                  (<a href={`mailto:${orderSuccess.email}`}>{orderSuccess.email}</a>). Please tap{' '}
+                  <strong>Send</strong> in your mail app to complete your order.
                 </>
               ) : (
                 <>
-                  We couldn&apos;t open your email app automatically. Please email{' '}
+                  We couldn&apos;t open your email app. Please email{' '}
                   <a href={`mailto:${orderSuccess.email}`}>{orderSuccess.email}</a> with your
                   order details.
                 </>
