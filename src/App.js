@@ -1,154 +1,739 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import './App.css';
-import Logo from './Images/logo.png'
+import Logo from './Images/logo.png';
+import { PRODUCTS, ORDER_EMAIL } from './data/products';
+import { openOrderEmail } from './utils/orderEmail';
 
-// Material‑UI icons
 import MenuIcon from '@mui/icons-material/Menu';
 import CloseIcon from '@mui/icons-material/Close';
 import FacebookIcon from '@mui/icons-material/Facebook';
 import InstagramIcon from '@mui/icons-material/Instagram';
+import ShoppingBagOutlinedIcon from '@mui/icons-material/ShoppingBagOutlined';
+import AddIcon from '@mui/icons-material/Add';
+import RemoveIcon from '@mui/icons-material/Remove';
+import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import FavoriteIcon from '@mui/icons-material/Favorite';
+
+const INFO_TABS = [
+  { id: 'about', label: 'About us' },
+  { id: 'contact', label: 'Contact' },
+  { id: 'faqs', label: 'FAQs' },
+];
 
 function App() {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [activePage, setActivePage] = useState('home'); 
+  const [activePage, setActivePage] = useState('shop');
+  const [infoTab, setInfoTab] = useState('about');
+  const [cart, setCart] = useState([]);
+  const [cartOpen, setCartOpen] = useState(false);
+  const [orderNote, setOrderNote] = useState('');
+  const [orderSuccess, setOrderSuccess] = useState(null);
+  const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [logoFailed, setLogoFailed] = useState(false);
+
+  const [selection, setSelection] = useState({
+    colorId: null,
+    options: {},
+    quantity: 1,
+    personalisation: '',
+  });
+
+  const cartCount = cart.reduce((n, i) => n + i.quantity, 0);
+
+  const openProduct = (product) => {
+    const defaultColor = product.colors[0];
+    const defaultOptions = {};
+    product.options.forEach((o) => {
+      defaultOptions[o.id] = o.choices[0];
+    });
+    setSelection({
+      colorId: defaultColor.id,
+      options: defaultOptions,
+      quantity: 1,
+      personalisation: '',
+    });
+    setSelectedProduct(product);
+    setModalVisible(true);
+    document.body.style.overflow = 'hidden';
+  };
+
+  const closeProduct = useCallback(() => {
+    setModalVisible(false);
+    document.body.style.overflow = '';
+    setTimeout(() => setSelectedProduct(null), 300);
+  }, []);
+
+  useEffect(() => {
+    const onKey = (e) => {
+        if (e.key === 'Escape') {
+        if (orderSuccess) setOrderSuccess(null);
+        else if (selectedProduct) closeProduct();
+        else if (cartOpen) setCartOpen(false);
+        else if (menuOpen) setMenuOpen(false);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [selectedProduct, cartOpen, menuOpen, orderSuccess, closeProduct]);
+
+  const navigate = (page) => {
+    setActivePage(page);
+    setMenuOpen(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const selectedColor =
+    selectedProduct?.colors.find((c) => c.id === selection.colorId) ??
+    selectedProduct?.colors[0];
+
+  const addToCart = () => {
+    if (!selectedProduct || !selectedColor) return;
+    const cartItem = {
+      id: `${selectedProduct.id}-${Date.now()}`,
+      productId: selectedProduct.id,
+      name: selectedProduct.name,
+      price: selectedProduct.price,
+      colorName: selectedColor.name,
+      colorHex: selectedColor.hex,
+      options: { ...selection.options },
+      optionLines: selectedProduct.options.map((o) => ({
+        label: o.label,
+        value: selection.options[o.id],
+      })),
+      personalisation: selection.personalisation.trim(),
+      quantity: selection.quantity,
+    };
+    setCart((prev) => [...prev, cartItem]);
+    closeProduct();
+    setCartOpen(true);
+  };
+
+  const updateCartQty = (id, delta) => {
+    setCart((prev) =>
+      prev
+        .map((item) =>
+          item.id === id
+            ? { ...item, quantity: Math.max(1, item.quantity + delta) }
+            : item
+        )
+        .filter((item) => item.quantity > 0)
+    );
+  };
+
+  const removeFromCart = (id) => {
+    setCart((prev) => prev.filter((item) => item.id !== id));
+  };
+
+  const cartTotal = cart.reduce((s, i) => s + i.price * i.quantity, 0);
+
+  const placeOrder = () => {
+    if (!cart.length || isPlacingOrder) return;
+
+    setIsPlacingOrder(true);
+    const orderSnapshot = [...cart];
+    const noteSnapshot = orderNote;
+    const itemCount = orderSnapshot.reduce((n, i) => n + i.quantity, 0);
+    const totalSnapshot = orderSnapshot.reduce((s, i) => s + i.price * i.quantity, 0);
+
+    const { opened, error } = openOrderEmail(ORDER_EMAIL, orderSnapshot, noteSnapshot);
+
+    setCart([]);
+    setOrderNote('');
+    setCartOpen(false);
+    setIsPlacingOrder(false);
+
+    setOrderSuccess({
+      itemCount,
+      total: totalSnapshot,
+      email: ORDER_EMAIL,
+      mailOpened: opened,
+      error,
+    });
+  };
+
+  const dismissOrderSuccess = () => {
+    setOrderSuccess(null);
+    navigate('shop');
+  };
 
   return (
     <div className="main-container">
-      {/* HEADER 1 */}
-      <header className="header">
+      <div className="promo-bar">
         <p>Welcome to our store</p>
-        <p>Free shipping on all orders over R500</p>
-      </header>
+        <p className="promo-bar__highlight">Free shipping on orders over R500</p>
+      </div>
 
-      {/* HEADER 2 */}
-      <header className="header1">
+      <header className="site-header">
         <button
-          className="header__menu-button"
+          className="icon-btn"
           onClick={() => setMenuOpen(true)}
           aria-label="Open menu"
         >
-          <MenuIcon fontSize="large" />
+          <MenuIcon />
         </button>
-        
-        <div className='imgpos'>
-          <img src={Logo} className='imgsize' />
-        </div>
+
+        <button
+          className="site-header__logo"
+          onClick={() => navigate('shop')}
+          aria-label="Hope in Hearts home"
+        >
+          {!logoFailed ? (
+            <img
+              src={Logo}
+              alt="Hope in Hearts"
+              className="site-header__logo-img"
+              onError={() => setLogoFailed(true)}
+            />
+          ) : (
+            <span className="site-header__logo-text">Hope in Hearts</span>
+          )}
+        </button>
+
+        <nav className="desktop-nav" aria-label="Main">
+          <button
+            className={activePage === 'shop' ? 'desktop-nav__link active' : 'desktop-nav__link'}
+            onClick={() => navigate('shop')}
+          >
+            Shop
+          </button>
+          <button
+            className={activePage === 'info' ? 'desktop-nav__link active' : 'desktop-nav__link'}
+            onClick={() => navigate('info')}
+          >
+            Our story
+          </button>
+        </nav>
+
+        <button
+          className="icon-btn cart-trigger"
+          onClick={() => setCartOpen(true)}
+          aria-label={`Open bag, ${cartCount} items`}
+        >
+          <ShoppingBagOutlinedIcon />
+          {cartCount > 0 && <span className="cart-badge">{cartCount}</span>}
+        </button>
       </header>
 
-      <div>
-        <hr className='borderhr'/>
-      </div>
+      <div className="header-divider" />
 
-      {/* MOBILE MENU OVERLAY */}
-      <div className={`mobile-menu ${menuOpen ? 'mobile-menu--open' : ''}`}>
+      <div
+        className={`menu-backdrop ${menuOpen ? 'menu-backdrop--visible' : ''}`}
+        onClick={() => setMenuOpen(false)}
+        aria-hidden="true"
+      />
+
+      <aside className={`side-menu ${menuOpen ? 'side-menu--open' : ''}`}>
         <button
-          className="mobile-menu__close"
+          className="icon-btn side-menu__close"
           onClick={() => setMenuOpen(false)}
           aria-label="Close menu"
         >
-          <CloseIcon fontSize="large" />
+          <CloseIcon />
         </button>
-        <div className="mobile-menu__logo">
-          {/* Replace with your real logo if you have one */}
-          <h1 className="mobile-menu__logo-text">Menu</h1>
-        </div>
-        <nav className="mobile-menu__nav">
-          <ul>
-             <li><a href="#" onClick={() => { setActivePage('home'); setMenuOpen(false); }}>Home</a></li>
-            <li><a href="#" onClick={() => { setActivePage('about'); setMenuOpen(false); }}>About us</a></li>
-            <li><a href="#" onClick={() => { setActivePage('contact'); setMenuOpen(false); }}>Contact</a></li>
-            <li><a href="#" onClick={() => { setActivePage('faqs'); setMenuOpen(false); }}>FAQs</a></li>
-          </ul>
+        <p className="side-menu__title">Menu</p>
+        <nav>
+          <button onClick={() => navigate('shop')}>Shop</button>
+          <button onClick={() => navigate('info')}>Our story</button>
+          <button
+            onClick={() => {
+              setCartOpen(true);
+              setMenuOpen(false);
+            }}
+          >
+            My bag ({cartCount})
+          </button>
         </nav>
-      </div>
+      </aside>
 
-      {/* MAIN BODY */}
       <main className="main">
-         {activePage === 'home' && (
-          <div>
-            <p className='maintext'>Our best sellers</p>
-          
-          </div>
+        {activePage === 'shop' && (
+          <section className="shop-section fade-in">
+            <div className="shop-hero">
+              <h1 className="shop-hero__title">Handmade with love</h1>
+              <p className="shop-hero__subtitle">
+                Soft nursery décor & gifts, crafted in Cape Town — personalised just for your
+                little one.
+              </p>
+            </div>
+
+            <h2 className="section-title">Our favourites</h2>
+
+            <div className="product-grid">
+              {PRODUCTS.map((product, index) => (
+                <article
+                  key={product.id}
+                  className="product-card"
+                  style={{ animationDelay: `${index * 0.08}s` }}
+                  onClick={() => openProduct(product)}
+                  onKeyDown={(e) => e.key === 'Enter' && openProduct(product)}
+                  role="button"
+                  tabIndex={0}
+                >
+                  <div
+                    className="product-card__visual"
+                    style={{ background: product.colors[0].hex }}
+                  >
+                    <span className="product-card__emoji" aria-hidden="true">
+                      {product.emoji}
+                    </span>
+                  </div>
+                  <div className="product-card__body">
+                    <h3>{product.name}</h3>
+                    <p className="product-card__tagline">{product.tagline}</p>
+                    <div className="product-card__footer">
+                      <span className="product-card__price">R{product.price}</span>
+                      <span className="product-card__cta">View details</span>
+                    </div>
+                    <div className="color-dots" aria-hidden="true">
+                      {product.colors.map((c) => (
+                        <span
+                          key={c.id}
+                          className="color-dot"
+                          style={{ backgroundColor: c.hex }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+
+            <p className="checkout-note">
+              <EmailOutlinedIcon fontSize="small" />
+              Orders are placed by email — no online payment needed. We&apos;ll confirm your
+              order personally.
+            </p>
+          </section>
         )}
 
-        {activePage === 'about' && (
-            <div style={{width: '30%', justifySelf: 'center'}}>
-              <section style={{textAlign: 'left'}}>
-                <h2 className="text-3xl font-semibold mb-4">About us</h2>
-                <p className="mb-4">
-                  What started as a craft market stall more than 15 years ago has grown into in a much loved business and income to supplement my fulltime teachers salary.
-                </p>
-                <p className="mb-4">
-                  All our items are handmade in Cape Town, South Africa and we have been successfully selling online since 2019.
-                </p>
-                <p>
-                  Should you not find an item that is 100% to your liking or colour scheme, we are more than willing to adjust our colours, fonts and themes to suit your specific needs. Just communicate this in the notes section on checkout.
-                </p>
-              </section>
-          </div>
-        )}
+        {activePage === 'info' && (
+          <section className="info-section fade-in">
+            <h1 className="section-title">Our story</h1>
 
-        {activePage === 'contact' && (
-            <div style={{width: '20%', justifySelf: 'center', marginLeft: '15%'}}>
-              <section style={{textAlign: 'left'}}>
-                <h2 className="text-3xl font-semibold mb-6">Contact</h2>
+            <div className="info-tabs" role="tablist">
+              {INFO_TABS.map((tab) => (
+                <button
+                  key={tab.id}
+                  role="tab"
+                  aria-selected={infoTab === tab.id}
+                  className={`info-tab ${infoTab === tab.id ? 'info-tab--active' : ''}`}
+                  onClick={() => setInfoTab(tab.id)}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
 
-                <div className="mb-4">
-                  <p style={{textDecoration: 'underline', fontWeight: 'bolder'}}>Email</p>
-                  <p className="text-gray-700">hopeinheartsdecor@gmail.com</p>
+            <div className="info-panel" role="tabpanel">
+              {infoTab === 'about' && (
+                <div className="info-content slide-up">
+                  <h2>About us</h2>
+                  <p>
+                    What started as a craft market stall more than 15 years ago has grown into a
+                    much loved business and income to supplement my full-time teacher&apos;s
+                    salary.
+                  </p>
+                  <p>
+                    All our items are handmade in Cape Town, South Africa and we have been
+                    successfully selling online since 2019.
+                  </p>
+                  <p>
+                    Should you not find an item that is 100% to your liking or colour scheme, we
+                    are more than willing to adjust our colours, fonts and themes to suit your
+                    specific needs. Just communicate this in the notes when you order.
+                  </p>
                 </div>
+              )}
 
-                <div>
-                  <p style={{textDecoration: 'underline', fontWeight: 'bolder'}}>Phone or WhatsApp</p>
-                  <p className="text-gray-700">084 655 4902</p>
+              {infoTab === 'contact' && (
+                <div className="info-content slide-up">
+                  <h2>Contact</h2>
+                  <div className="contact-block">
+                    <h3>Email</h3>
+                    <a href="mailto:hopeinheartsdecor@gmail.com">hopeinheartsdecor@gmail.com</a>
+                  </div>
+                  <div className="contact-block">
+                    <h3>Orders</h3>
+                    <a href={`mailto:${ORDER_EMAIL}`}>{ORDER_EMAIL}</a>
+                  </div>
+                  <div className="contact-block">
+                    <h3>Phone or WhatsApp</h3>
+                    <a href="tel:+27846554902">084 655 4902</a>
+                  </div>
+                  <p className="contact-note">
+                    We&apos;re based in Durbanville, Cape Town — collection is welcome.
+                  </p>
                 </div>
-              </section>
-          </div>
+              )}
+
+              {infoTab === 'faqs' && (
+                <div className="info-content slide-up">
+                  <h2>FAQs</h2>
+                  <details className="faq-item" open>
+                    <summary>Do you customise products?</summary>
+                    <p>
+                      Yes! We adjust colours, fonts and themes to suit your needs. Mention your
+                      wishes in the order notes or personalisation field.
+                    </p>
+                  </details>
+                  <details className="faq-item">
+                    <summary>What is the lead time?</summary>
+                    <p>
+                      Normally 7–10 working days from order confirmation, as most items are
+                      personalised. Regular stock items may be quicker. Allow a few extra days for
+                      courier delivery in remote areas.
+                    </p>
+                  </details>
+                  <details className="faq-item">
+                    <summary>Can I collect my order?</summary>
+                    <p>
+                      Yes — we are in Durbanville, Cape Town, if you prefer to collect instead of
+                      delivery.
+                    </p>
+                  </details>
+                  <details className="faq-item">
+                    <summary>Do you have a physical shop?</summary>
+                    <p>No — we are an online store only, with optional collection.</p>
+                  </details>
+                  <details className="faq-item">
+                    <summary>Will I get a tracking number?</summary>
+                    <p>
+                      Yes. Once your parcel is collected by our courier partner, we will send you
+                      the tracking details.
+                    </p>
+                  </details>
+                </div>
+              )}
+            </div>
+          </section>
         )}
-
-        {activePage === 'faqs' && (
-            <div style={{width: '30%', justifySelf: 'center'}}>
-              <section className="max-w-xl mx-auto p-6 text-gray-800 space-y-4">
-                  <h2 className="text-3xl font-semibold mb-4">FAQs</h2>
-
-                  <p>
-                    <strong>Do we customise our products?</strong> Yes, we are more than willing to adjust our colours, fonts and themes to suit your specific needs. Just communicate this in the notes section on checkout.
-                  </p>
-
-                  <p>
-                    <strong>Lead time?</strong> Lead time is normally 7 - 10 working days from order confirmation, given that most items are customised with names etc.{" "}
-                    <a style={{textDecoration: 'underline'}}>This time could be shorter for regular stock items.</a> Allow a further few days for courier delivery in remote lying areas.
-                  </p>
-
-                  <p>
-                    <strong>Collection of items possible?</strong> Yes, we are located in Durbanville, Cape Town, should you prefer to collect your items.
-                  </p>
-
-                  <p>
-                    <strong>Do you have a physical shop?</strong> No, we are an online store only.
-                  </p>
-
-                  <p>
-                    <strong>Tracking number provided?</strong> Yes, once an item has been collected by our various courier partner, we will provide you with it.
-                  </p>
-                </section>
-          </div>
-        )}
-
       </main>
 
-      {/* FOOTER */}
+      {/* Product detail modal */}
+      {selectedProduct && (
+        <div
+          className={`modal-root ${modalVisible ? 'modal-root--visible' : ''}`}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="product-modal-title"
+        >
+          <button className="modal-backdrop" onClick={closeProduct} aria-label="Close" />
+          <div className={`product-modal ${modalVisible ? 'product-modal--visible' : ''}`}>
+            <button className="modal-close icon-btn" onClick={closeProduct} aria-label="Close">
+              <CloseIcon />
+            </button>
+
+            <div
+              className="product-modal__hero"
+              style={{ background: selectedColor?.hex }}
+            >
+              <span className="product-modal__emoji">{selectedProduct.emoji}</span>
+            </div>
+
+            <div className="product-modal__content">
+              <h2 id="product-modal-title">{selectedProduct.name}</h2>
+              <p className="product-modal__price">R{selectedProduct.price}</p>
+              <p className="product-modal__desc">{selectedProduct.description}</p>
+
+              <div className="option-group">
+                <span className="option-label">Colour</span>
+                <div className="color-picker">
+                  {selectedProduct.colors.map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      className={`color-swatch ${
+                        selection.colorId === c.id ? 'color-swatch--active' : ''
+                      }`}
+                      style={{ backgroundColor: c.hex }}
+                      onClick={() => setSelection((s) => ({ ...s, colorId: c.id }))}
+                      aria-label={c.name}
+                      title={c.name}
+                    />
+                  ))}
+                </div>
+                <span className="color-name">{selectedColor?.name}</span>
+              </div>
+
+              {selectedProduct.options.map((opt) => (
+                <div className="option-group" key={opt.id}>
+                  <label className="option-label" htmlFor={`opt-${opt.id}`}>
+                    {opt.label}
+                  </label>
+                  <select
+                    id={`opt-${opt.id}`}
+                    className="option-select"
+                    value={selection.options[opt.id]}
+                    onChange={(e) =>
+                      setSelection((s) => ({
+                        ...s,
+                        options: { ...s.options, [opt.id]: e.target.value },
+                      }))
+                    }
+                  >
+                    {opt.choices.map((ch) => (
+                      <option key={ch} value={ch}>
+                        {ch}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ))}
+
+              <div className="option-group">
+                <label className="option-label" htmlFor="personalisation">
+                  Personalisation (name / text)
+                </label>
+                <input
+                  id="personalisation"
+                  type="text"
+                  className="option-input"
+                  placeholder="e.g. Emma Rose"
+                  value={selection.personalisation}
+                  onChange={(e) =>
+                    setSelection((s) => ({ ...s, personalisation: e.target.value }))
+                  }
+                />
+              </div>
+
+              <div className="option-group quantity-row">
+                <span className="option-label">Quantity</span>
+                <div className="quantity-control">
+                  <button
+                    type="button"
+                    className="qty-btn"
+                    onClick={() =>
+                      setSelection((s) => ({
+                        ...s,
+                        quantity: Math.max(1, s.quantity - 1),
+                      }))
+                    }
+                    aria-label="Decrease quantity"
+                  >
+                    <RemoveIcon fontSize="small" />
+                  </button>
+                  <span className="qty-value">{selection.quantity}</span>
+                  <button
+                    type="button"
+                    className="qty-btn"
+                    onClick={() =>
+                      setSelection((s) => ({ ...s, quantity: s.quantity + 1 }))
+                    }
+                    aria-label="Increase quantity"
+                  >
+                    <AddIcon fontSize="small" />
+                  </button>
+                </div>
+              </div>
+
+              <button type="button" className="btn-primary" onClick={addToCart}>
+                Add to bag — R{selectedProduct.price * selection.quantity}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cart drawer */}
+      <div
+        className={`cart-drawer-root ${cartOpen ? 'cart-drawer-root--visible' : ''}`}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Shopping bag"
+      >
+        <button
+          className="modal-backdrop"
+          onClick={() => setCartOpen(false)}
+          aria-label="Close bag"
+        />
+        <aside className={`cart-drawer ${cartOpen ? 'cart-drawer--open' : ''}`}>
+          <div className="cart-drawer__header">
+            <h2>Your bag</h2>
+            <button
+              className="icon-btn"
+              onClick={() => setCartOpen(false)}
+              aria-label="Close"
+            >
+              <CloseIcon />
+            </button>
+          </div>
+
+          {cart.length === 0 ? (
+            <p className="cart-empty">Your bag is empty — tap a product to start.</p>
+          ) : (
+            <>
+              <ul className="cart-list">
+                {cart.map((item) => (
+                  <li key={item.id} className="cart-item">
+                    <div
+                      className="cart-item__swatch"
+                      style={{ background: item.colorHex }}
+                    />
+                    <div className="cart-item__info">
+                      <strong>{item.name}</strong>
+                      <span className="cart-item__meta">{item.colorName}</span>
+                      {(item.optionLines ||
+                        Object.entries(item.options).map(([k, v]) => ({
+                          label: k,
+                          value: v,
+                        }))
+                      ).map(({ label, value }) => (
+                        <span key={`${label}-${value}`} className="cart-item__meta">
+                          {label}: {value}
+                        </span>
+                      ))}
+                      {item.personalisation && (
+                        <span className="cart-item__meta">
+                          &ldquo;{item.personalisation}&rdquo;
+                        </span>
+                      )}
+                      <div className="cart-item__actions">
+                        <div className="quantity-control quantity-control--small">
+                          <button
+                            type="button"
+                            className="qty-btn"
+                            onClick={() => updateCartQty(item.id, -1)}
+                            aria-label="Decrease"
+                          >
+                            <RemoveIcon fontSize="small" />
+                          </button>
+                          <span>{item.quantity}</span>
+                          <button
+                            type="button"
+                            className="qty-btn"
+                            onClick={() => updateCartQty(item.id, 1)}
+                            aria-label="Increase"
+                          >
+                            <AddIcon fontSize="small" />
+                          </button>
+                        </div>
+                        <span className="cart-item__price">
+                          R{item.price * item.quantity}
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      className="cart-item__remove"
+                      onClick={() => removeFromCart(item.id)}
+                      aria-label="Remove item"
+                    >
+                      ×
+                    </button>
+                  </li>
+                ))}
+              </ul>
+
+              <div className="cart-footer">
+                <div className="cart-total">
+                  <span>Estimated total</span>
+                  <strong>R{cartTotal}</strong>
+                </div>
+                <label className="cart-note-label" htmlFor="order-note">
+                  Extra notes (optional)
+                </label>
+                <textarea
+                  id="order-note"
+                  className="cart-note-input"
+                  placeholder="Delivery address, gift message, colour tweaks…"
+                  rows={3}
+                  value={orderNote}
+                  onChange={(e) => setOrderNote(e.target.value)}
+                />
+                <p className="cart-footer__note">
+                  Tap below to open your email app with your order ready to send. Payment is
+                  arranged after we confirm with you.
+                </p>
+                <button
+                  type="button"
+                  className="btn-primary btn-primary--full"
+                  onClick={placeOrder}
+                  disabled={isPlacingOrder}
+                >
+                  <EmailOutlinedIcon fontSize="small" />
+                  {isPlacingOrder ? 'Opening email…' : `Place order via email`}
+                </button>
+              </div>
+            </>
+          )}
+        </aside>
+      </div>
+
+      {/* Order success popup */}
+      {orderSuccess && (
+        <div
+          className="order-success-root order-success-root--visible"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="order-success-title"
+        >
+          <button
+            className="modal-backdrop"
+            onClick={dismissOrderSuccess}
+            aria-label="Close"
+          />
+          <div className="order-success-card">
+            <div className="order-success-card__icon-wrap">
+              <CheckCircleOutlineIcon className="order-success-card__icon" />
+              <span className="order-success-card__heart" aria-hidden="true">
+                <FavoriteIcon fontSize="small" />
+              </span>
+            </div>
+            <h2 id="order-success-title">Thank you!</h2>
+            <p className="order-success-card__lead">Your order is ready to send</p>
+            <p className="order-success-card__detail">
+              {orderSuccess.mailOpened ? (
+                <>
+                  Your email app should have opened with{' '}
+                  <strong>
+                    {orderSuccess.itemCount} item{orderSuccess.itemCount !== 1 ? 's' : ''}
+                  </strong>{' '}
+                  (R{orderSuccess.total}) addressed to{' '}
+                  <a href={`mailto:${orderSuccess.email}`}>{orderSuccess.email}</a>.
+                  Please tap <strong>Send</strong> in your mail app to complete your order.
+                </>
+              ) : (
+                <>
+                  We couldn&apos;t open your email app automatically. Please email{' '}
+                  <a href={`mailto:${orderSuccess.email}`}>{orderSuccess.email}</a> with your
+                  order details.
+                </>
+              )}
+            </p>
+            <p className="order-success-card__cleared">
+              Your bag has been cleared — we&apos;ll be in touch soon!
+            </p>
+            <button type="button" className="btn-primary" onClick={dismissOrderSuccess}>
+              Continue shopping
+            </button>
+          </div>
+        </div>
+      )}
+
       <footer className="footer">
         <div className="footer__social">
-          <a href="https://facebook.com/yourpage" target="_blank" rel="noopener noreferrer">
-            <FacebookIcon fontSize="large" />
+          <a
+            href="https://facebook.com/yourpage"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Facebook"
+          >
+            <FacebookIcon />
           </a>
-          <a href="https://instagram.com/yourpage" target="_blank" rel="noopener noreferrer">
-            <InstagramIcon fontSize="large" />
+          <a
+            href="https://instagram.com/yourpage"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Instagram"
+          >
+            <InstagramIcon />
           </a>
         </div>
-        <p className="footer__copy"> 
-          © 2026, Hope‑in‑Hearts Nursery Decor Powered by Hope-in-Hearts-Development
+        <p className="footer__copy">
+          © 2026, Hope‑in‑Hearts Nursery Decor · Powered by Hope-in-Hearts-Development
         </p>
       </footer>
     </div>
