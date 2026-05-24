@@ -11,7 +11,7 @@ import { BUSINESS } from '../data/products';
  * 4. Run npm run build && npm run deploy
  */
 /** Public client-side key from https://web3forms.com (also in .env.local) */
-const WEB3FORMS_KEY_FALLBACK = 'c02b39e4-dcd6-4d77-ac53-0beeaa3432bf';
+const WEB3FORMS_KEY_FALLBACK = 'ad497560-bcfa-430b-af36-5869618c0043';
 
 export const WEB3FORMS_ACCESS_KEY =
   process.env.REACT_APP_WEB3FORMS_ACCESS_KEY?.trim() || WEB3FORMS_KEY_FALLBACK;
