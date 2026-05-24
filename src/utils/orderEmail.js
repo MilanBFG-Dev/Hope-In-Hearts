@@ -1,4 +1,3 @@
-import { BUSINESS } from '../data/products';
 import {
   WEB3FORMS_ACCESS_KEY,
   WEB3FORMS_ENDPOINT,
