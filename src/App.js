@@ -3,6 +3,7 @@ import './App.css';
 import Logo from './Images/logo.png';
 import { PRODUCTS, ORDER_EMAIL, BUSINESS } from './data/products';
 import { sendOrderEmail, isValidEmail } from './utils/orderEmail';
+import { isOrderEmailConfigured } from './config/emailService';
 
 import MenuIcon from '@mui/icons-material/Menu';
 import CloseIcon from '@mui/icons-material/Close';
@@ -159,7 +160,6 @@ function App() {
     const customerSnapshot = { name, email, phone };
 
     const result = await sendOrderEmail(
-      ORDER_EMAIL,
       orderSnapshot,
       noteSnapshot,
       customerSnapshot
@@ -167,11 +167,15 @@ function App() {
 
     if (!result.sent) {
       setIsPlacingOrder(false);
-      setOrderError(
-        result.error === 'mailto_blocked'
-          ? 'Could not open your email app. Please email us directly at ' + ORDER_EMAIL
-          : 'Could not send your order. Please try again or email us at ' + ORDER_EMAIL
-      );
+      if (result.error === 'not_configured') {
+        setOrderError(
+          `Online orders are not active yet. Please email ${ORDER_EMAIL} with your bag details.`
+        );
+      } else {
+        setOrderError(
+          result.message || `Could not send your order. Please try again or email ${ORDER_EMAIL}.`
+        );
+      }
       return;
     }
 
@@ -186,9 +190,7 @@ function App() {
       total: result.total,
       email: ORDER_EMAIL,
       orderRef: result.orderRef,
-      method: result.method,
-      sent: result.sent,
-      error: result.error,
+      sent: true,
     });
   };
 
@@ -341,8 +343,8 @@ function App() {
 
             <p className="checkout-note">
               <EmailOutlinedIcon fontSize="small" />
-              Orders are placed by email — no online payment needed. We&apos;ll confirm your
-              order personally.
+              Place your order in one tap — we&apos;ll email you to confirm payment and delivery.
+              No online card payment required.
             </p>
           </section>
         )}
@@ -740,23 +742,34 @@ function App() {
                 />
                 {orderError && <p className="cart-error">{orderError}</p>}
                 <p className="cart-footer__note">
-                  {process.env.REACT_APP_WEB3FORMS_ACCESS_KEY
-                    ? `Your order will be sent directly to Hope in Hearts. We will reply to confirm payment and delivery.`
-                    : `Your email app will open with your order addressed to Hope in Hearts (${ORDER_EMAIL}). Tap Send to complete.`}
+                  Your order is sent instantly to Hope in Hearts — no email app needed. We&apos;ll
+                  reply to you to confirm payment and delivery.
                 </p>
                 <button
                   type="button"
                   className="btn-primary btn-primary--full"
                   onClick={placeOrder}
-                  disabled={isPlacingOrder}
+                  disabled={isPlacingOrder || !isOrderEmailConfigured()}
                 >
                   <EmailOutlinedIcon fontSize="small" />
-                  {isPlacingOrder
-                    ? 'Sending order…'
-                    : process.env.REACT_APP_WEB3FORMS_ACCESS_KEY
-                      ? 'Place order'
-                      : 'Place order via email'}
+                  {isPlacingOrder ? 'Sending your order…' : 'Place order'}
                 </button>
+                {!isOrderEmailConfigured() && (
+                  <p className="cart-footer__setup">
+                    {process.env.NODE_ENV === 'development' ? (
+                      <>
+                        Dev: add <code>REACT_APP_WEB3FORMS_ACCESS_KEY</code> to{' '}
+                        <code>.env.local</code> (see .env.example), then restart{' '}
+                        <code>npm start</code>.
+                      </>
+                    ) : (
+                      <>
+                        Online ordering is being set up. Please email{' '}
+                        <a href={`mailto:${ORDER_EMAIL}`}>{ORDER_EMAIL}</a> to place your order.
+                      </>
+                    )}
+                  </p>
+                )}
               </div>
             </>
           )}
@@ -785,50 +798,20 @@ function App() {
             </div>
             <h2 id="order-success-title">Thank you!</h2>
             <p className="order-success-card__ref">Order {orderSuccess.orderRef}</p>
-            <p className="order-success-card__lead">
-              {orderSuccess.method === 'web3forms' && orderSuccess.sent
-                ? 'Your order has been sent'
-                : orderSuccess.sent
-                  ? 'Your order is ready to send'
-                  : 'Something went wrong'}
-            </p>
+            <p className="order-success-card__lead">Your order has been sent!</p>
             <p className="order-success-card__detail">
-              {orderSuccess.method === 'web3forms' && orderSuccess.sent ? (
-                <>
-                  We&apos;ve sent your order for{' '}
-                  <strong>
-                    {orderSuccess.itemCount} item{orderSuccess.itemCount !== 1 ? 's' : ''}
-                  </strong>{' '}
-                  (R{orderSuccess.total}) to{' '}
-                  <a href={BUSINESS.website} target="_blank" rel="noopener noreferrer">
-                    Hope in Hearts
-                  </a>{' '}
-                  (<a href={`mailto:${orderSuccess.email}`}>{orderSuccess.email}</a>). We&apos;ll
-                  reply shortly to confirm payment and delivery.
-                </>
-              ) : orderSuccess.sent ? (
-                <>
-                  Your email app should have opened with a formatted order for{' '}
-                  <strong>
-                    {orderSuccess.itemCount} item{orderSuccess.itemCount !== 1 ? 's' : ''}
-                  </strong>{' '}
-                  (R{orderSuccess.total}) addressed to{' '}
-                  <a href={BUSINESS.website} target="_blank" rel="noopener noreferrer">
-                    Hope in Hearts
-                  </a>{' '}
-                  (<a href={`mailto:${orderSuccess.email}`}>{orderSuccess.email}</a>). Please tap{' '}
-                  <strong>Send</strong> in your mail app to complete your order.
-                </>
-              ) : (
-                <>
-                  We couldn&apos;t open your email app. Please email{' '}
-                  <a href={`mailto:${orderSuccess.email}`}>{orderSuccess.email}</a> with your
-                  order details.
-                </>
-              )}
+              We&apos;ve received your order for{' '}
+              <strong>
+                {orderSuccess.itemCount} item{orderSuccess.itemCount !== 1 ? 's' : ''}
+              </strong>{' '}
+              (R{orderSuccess.total}). A confirmation was sent to{' '}
+              <a href={BUSINESS.website} target="_blank" rel="noopener noreferrer">
+                Hope in Hearts
+              </a>
+              — we&apos;ll reply to your email soon with payment and delivery details.
             </p>
             <p className="order-success-card__cleared">
-              Your bag has been cleared — we&apos;ll be in touch soon!
+              Your bag is empty — happy shopping!
             </p>
             <button type="button" className="btn-primary" onClick={dismissOrderSuccess}>
               Continue shopping

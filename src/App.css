@@ -989,6 +989,25 @@
   background: var(--white);
 }
 
+.cart-footer__setup {
+  margin: 0.75rem 0 0;
+  font-size: 0.7rem;
+  line-height: 1.5;
+  color: var(--text-soft);
+  text-align: left;
+  padding: 0.5rem 0.65rem;
+  background: #fff8e6;
+  border-radius: 8px;
+  border: 1px dashed #e8d4a8;
+}
+
+.cart-footer__setup code {
+  font-size: 0.65rem;
+  background: rgba(0, 0, 0, 0.05);
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+}
+
 .cart-error {
   margin: 0 0 0.75rem;
   padding: 0.65rem 0.85rem;
