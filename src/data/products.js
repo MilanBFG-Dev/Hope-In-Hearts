@@ -103,7 +103,7 @@ export const PRODUCTS = [
 export const BUSINESS = {
   name: 'Hope in Hearts Nursery Décor',
   website: 'https://www.hopeinhearts.co.za/',
-  email: 'milangenade116@gmail.com',
+  email: 'hopeinheartsdecor@gmail.com',
   phone: '084 655 4902',
 };
 
