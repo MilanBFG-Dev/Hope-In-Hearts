@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import './App.css';
 import Logo from './Images/logo.png';
-import { PRODUCTS, ORDER_EMAIL, BUSINESS } from './data/products';
+import { PRODUCTS, ORDER_EMAIL, BUSINESS, formatPrice } from './data/products';
 import { sendOrderEmail, isValidEmail } from './utils/orderEmail';
 import { isOrderEmailConfigured } from './config/emailService';
 
@@ -47,6 +47,7 @@ function App() {
     quantity: 1,
     personalisation: '',
   });
+  const [modalImageIndex, setModalImageIndex] = useState(0);
 
   const cartCount = cart.reduce((n, i) => n + i.quantity, 0);
 
@@ -62,6 +63,7 @@ function App() {
       quantity: 1,
       personalisation: '',
     });
+    setModalImageIndex(0);
     setSelectedProduct(product);
     setModalVisible(true);
     document.body.style.overflow = 'hidden';
@@ -96,13 +98,28 @@ function App() {
     selectedProduct?.colors.find((c) => c.id === selection.colorId) ??
     selectedProduct?.colors[0];
 
+  const modalImages =
+    selectedProduct?.images?.length > 0
+      ? selectedProduct.images
+      : selectedProduct
+        ? [selectedProduct.image]
+        : [];
+  const activeModalImage = modalImages[modalImageIndex] ?? selectedProduct?.image;
+
   const addToCart = () => {
     if (!selectedProduct || !selectedColor) return;
+    if (
+      selectedProduct.personalisationRequired &&
+      !selection.personalisation.trim()
+    ) {
+      return;
+    }
     const cartItem = {
       id: `${selectedProduct.id}-${Date.now()}`,
       productId: selectedProduct.id,
       name: selectedProduct.name,
-      price: selectedProduct.price,
+      price: selectedProduct.priceOnRequest ? 0 : selectedProduct.price,
+      priceOnRequest: !!selectedProduct.priceOnRequest,
       colorName: selectedColor.name,
       colorHex: selectedColor.hex,
       options: { ...selection.options },
@@ -134,7 +151,11 @@ function App() {
     setCart((prev) => prev.filter((item) => item.id !== id));
   };
 
-  const cartTotal = cart.reduce((s, i) => s + i.price * i.quantity, 0);
+  const cartTotal = cart.reduce(
+    (s, i) => s + (i.priceOnRequest ? 0 : i.price * i.quantity),
+    0
+  );
+  const hasPriceOnRequest = cart.some((i) => i.priceOnRequest);
 
   const placeOrder = async () => {
     if (!cart.length || isPlacingOrder) return;
@@ -232,21 +253,6 @@ function App() {
           )}
         </button>
 
-        <nav className="desktop-nav" aria-label="Main">
-          <button
-            className={activePage === 'shop' ? 'desktop-nav__link active' : 'desktop-nav__link'}
-            onClick={() => navigate('shop')}
-          >
-            Shop
-          </button>
-          <button
-            className={activePage === 'info' ? 'desktop-nav__link active' : 'desktop-nav__link'}
-            onClick={() => navigate('info')}
-          >
-            Our story
-          </button>
-        </nav>
-
         <button
           className="icon-btn cart-trigger"
           onClick={() => setCartOpen(true)}
@@ -256,6 +262,21 @@ function App() {
           {cartCount > 0 && <span className="cart-badge">{cartCount}</span>}
         </button>
       </header>
+
+      <nav className="page-nav" aria-label="Main">
+        <button
+          className={activePage === 'shop' ? 'page-nav__link page-nav__link--active' : 'page-nav__link'}
+          onClick={() => navigate('shop')}
+        >
+          Shop
+        </button>
+        <button
+          className={activePage === 'info' ? 'page-nav__link page-nav__link--active' : 'page-nav__link'}
+          onClick={() => navigate('info')}
+        >
+          Our story
+        </button>
+      </nav>
 
       <div className="header-divider" />
 
@@ -312,19 +333,23 @@ function App() {
                   role="button"
                   tabIndex={0}
                 >
-                  <div
-                    className="product-card__visual"
-                    style={{ background: product.colors[0].hex }}
-                  >
-                    <span className="product-card__emoji" aria-hidden="true">
-                      {product.emoji}
-                    </span>
+                  <div className="product-card__visual">
+                    <img
+                      src={product.image}
+                      alt={product.name}
+                      className="product-card__img"
+                      loading="lazy"
+                    />
                   </div>
                   <div className="product-card__body">
                     <h3>{product.name}</h3>
                     <p className="product-card__tagline">{product.tagline}</p>
                     <div className="product-card__footer">
-                      <span className="product-card__price">R{product.price}</span>
+                      <span className="product-card__price">
+                        {product.priceOnRequest
+                          ? 'Price on request'
+                          : `R${product.price}`}
+                      </span>
                       <span className="product-card__cta">View details</span>
                     </div>
                     <div className="color-dots" aria-hidden="true">
@@ -470,37 +495,69 @@ function App() {
               <CloseIcon />
             </button>
 
-            <div
-              className="product-modal__hero"
-              style={{ background: selectedColor?.hex }}
-            >
-              <span className="product-modal__emoji">{selectedProduct.emoji}</span>
+            <div className="product-modal__media">
+              <div className="product-modal__hero">
+                <img
+                  src={activeModalImage}
+                  alt={selectedProduct.name}
+                  className="product-modal__img"
+                />
+              </div>
+
+              {modalImages.length > 1 && (
+                <div className="product-modal__gallery" aria-label="Product photos">
+                  {modalImages.map((img, index) => (
+                    <button
+                      key={`${selectedProduct.id}-img-${index}`}
+                      type="button"
+                      className={`product-modal__thumb ${
+                        modalImageIndex === index ? 'product-modal__thumb--active' : ''
+                      }`}
+                      onClick={() => setModalImageIndex(index)}
+                      aria-label={`View photo ${index + 1}`}
+                      aria-current={modalImageIndex === index}
+                    >
+                      <img src={img} alt="" />
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="product-modal__content">
               <h2 id="product-modal-title">{selectedProduct.name}</h2>
-              <p className="product-modal__price">R{selectedProduct.price}</p>
+              <p
+                className={
+                  selectedProduct.priceOnRequest
+                    ? 'product-modal__price product-modal__price--request'
+                    : 'product-modal__price'
+                }
+              >
+                {formatPrice(selectedProduct, selection.quantity)}
+              </p>
               <p className="product-modal__desc">{selectedProduct.description}</p>
 
-              <div className="option-group">
-                <span className="option-label">Colour</span>
-                <div className="color-picker">
-                  {selectedProduct.colors.map((c) => (
-                    <button
-                      key={c.id}
-                      type="button"
-                      className={`color-swatch ${
-                        selection.colorId === c.id ? 'color-swatch--active' : ''
-                      }`}
-                      style={{ backgroundColor: c.hex }}
-                      onClick={() => setSelection((s) => ({ ...s, colorId: c.id }))}
-                      aria-label={c.name}
-                      title={c.name}
-                    />
-                  ))}
+              {selectedProduct.colors.length > 1 && (
+                <div className="option-group">
+                  <span className="option-label">Colour</span>
+                  <div className="color-picker">
+                    {selectedProduct.colors.map((c) => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        className={`color-swatch ${
+                          selection.colorId === c.id ? 'color-swatch--active' : ''
+                        } ${c.id === 'white' ? 'color-swatch--white' : ''}`}
+                        style={{ backgroundColor: c.hex }}
+                        onClick={() => setSelection((s) => ({ ...s, colorId: c.id }))}
+                        aria-label={c.name}
+                        title={c.name}
+                      />
+                    ))}
+                  </div>
+                  <span className="color-name">{selectedColor?.name}</span>
                 </div>
-                <span className="color-name">{selectedColor?.name}</span>
-              </div>
+              )}
 
               {selectedProduct.options.map((opt) => (
                 <div className="option-group" key={opt.id}>
@@ -529,17 +586,20 @@ function App() {
 
               <div className="option-group">
                 <label className="option-label" htmlFor="personalisation">
-                  Personalisation (name / text)
+                  {selectedProduct.personalisationLabel || 'Personalisation (name / text)'}
                 </label>
                 <input
                   id="personalisation"
                   type="text"
                   className="option-input"
-                  placeholder="e.g. Emma Rose"
+                  placeholder={
+                    selectedProduct.personalisationPlaceholder || 'e.g. Emma Rose'
+                  }
                   value={selection.personalisation}
                   onChange={(e) =>
                     setSelection((s) => ({ ...s, personalisation: e.target.value }))
                   }
+                  required={selectedProduct.personalisationRequired}
                 />
               </div>
 
@@ -573,8 +633,18 @@ function App() {
                 </div>
               </div>
 
-              <button type="button" className="btn-primary" onClick={addToCart}>
-                Add to bag — R{selectedProduct.price * selection.quantity}
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={addToCart}
+                disabled={
+                  selectedProduct.personalisationRequired &&
+                  !selection.personalisation.trim()
+                }
+              >
+                Add to bag
+                {!selectedProduct.priceOnRequest &&
+                  ` — R${selectedProduct.price * selection.quantity}`}
               </button>
             </div>
           </div>
@@ -655,7 +725,9 @@ function App() {
                           </button>
                         </div>
                         <span className="cart-item__price">
-                          R{item.price * item.quantity}
+                          {item.priceOnRequest
+                            ? 'Price on request'
+                            : `R${item.price * item.quantity}`}
                         </span>
                       </div>
                     </div>
@@ -673,9 +745,19 @@ function App() {
 
               <div className="cart-footer">
                 <div className="cart-total">
-                  <span>Estimated total</span>
-                  <strong>R{cartTotal}</strong>
+                  <span>{hasPriceOnRequest ? 'Estimated total' : 'Total'}</span>
+                  <strong>
+                    {hasPriceOnRequest && cartTotal === 0
+                      ? 'Price on request'
+                      : `R${cartTotal}${hasPriceOnRequest ? '+' : ''}`}
+                  </strong>
                 </div>
+                {hasPriceOnRequest && (
+                  <p className="cart-footer__note" style={{ marginTop: 0 }}>
+                    Custom items are priced per order — we&apos;ll confirm the final
+                    amount when we reply to you.
+                  </p>
+                )}
 
                 <p className="cart-footer__heading">Your details</p>
                 <div className="cart-customer-fields">
@@ -804,7 +886,7 @@ function App() {
               <strong>
                 {orderSuccess.itemCount} item{orderSuccess.itemCount !== 1 ? 's' : ''}
               </strong>{' '}
-              (R{orderSuccess.total}). A confirmation was sent to{' '}
+              {orderSuccess.total > 0 ? `(R${orderSuccess.total})` : '(custom pricing)'}. A confirmation was sent to{' '}
               <a href={BUSINESS.website} target="_blank" rel="noopener noreferrer">
                 Hope in Hearts
               </a>

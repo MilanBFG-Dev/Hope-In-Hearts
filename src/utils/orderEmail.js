@@ -26,8 +26,11 @@ function formatOrderDate() {
 
 function formatItemBlock(item, index) {
   const opts = (item.optionLines || []).map(({ label, value }) => `${label}: ${value}`);
+  const priceLine = item.priceOnRequest
+    ? 'Price on request'
+    : formatMoney(item.price * item.quantity);
   const lines = [
-    `${index + 1}) ${item.name} ×${item.quantity} — ${formatMoney(item.price * item.quantity)}`,
+    `${index + 1}) ${item.name} ×${item.quantity} — ${priceLine}`,
     `   ${item.colorName}${opts.length ? ' | ' + opts.join(' | ') : ''}`,
   ];
   if (item.personalisation) {
@@ -41,7 +44,11 @@ function formatItemBlock(item, index) {
  */
 export function buildOrderEmailContent(cart, orderNote = '', customer = {}, orderRef) {
   const ref = orderRef || generateOrderReference();
-  const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const total = cart.reduce(
+    (sum, item) => sum + (item.priceOnRequest ? 0 : item.price * item.quantity),
+    0
+  );
+  const hasCustomPricing = cart.some((item) => item.priceOnRequest);
   const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
   const dateStr = formatOrderDate();
   const phone = customer.phone?.trim() || '—';
@@ -58,7 +65,7 @@ export function buildOrderEmailContent(cart, orderNote = '', customer = {}, orde
     'ITEMS',
     ...cart.map((item, i) => formatItemBlock(item, i)),
     '',
-    `TOTAL: ${formatMoney(total)} (${itemCount} item${itemCount !== 1 ? 's' : ''})`,
+    `TOTAL: ${hasCustomPricing ? `${formatMoney(total)}+ (custom items priced separately)` : formatMoney(total)} (${itemCount} item${itemCount !== 1 ? 's' : ''})`,
     orderNote.trim() ? `\nNOTES\n${orderNote.trim()}` : null,
     '',
     '—',
