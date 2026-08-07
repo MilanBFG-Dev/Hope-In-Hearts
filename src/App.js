@@ -4,6 +4,7 @@ import Logo from './Images/logo.png';
 import { PRODUCTS, ORDER_EMAIL, BUSINESS, formatPrice } from './data/products';
 import { sendOrderEmail, isValidEmail } from './utils/orderEmail';
 import { isOrderEmailConfigured } from './config/emailService';
+import LifestyleFlow, { LifestyleStrip } from './components/LifestyleFlow';
 
 import MenuIcon from '@mui/icons-material/Menu';
 import CloseIcon from '@mui/icons-material/Close';
@@ -222,6 +223,7 @@ function App() {
 
   return (
     <div className="main-container">
+      <div className="site-top">
       <div className="promo-bar">
         <p>Welcome to our store</p>
         <p className="promo-bar__highlight">Free shipping on orders over R500</p>
@@ -279,6 +281,7 @@ function App() {
       </nav>
 
       <div className="header-divider" />
+      </div>
 
       <div
         className={`menu-backdrop ${menuOpen ? 'menu-backdrop--visible' : ''}`}
@@ -311,7 +314,9 @@ function App() {
 
       <main className="main">
         {activePage === 'shop' && (
-          <section className="shop-section fade-in">
+          <>
+            <LifestyleFlow />
+            <section className="shop-section fade-in">
             <div className="shop-hero">
               <h1 className="shop-hero__title">Handmade with love</h1>
               <p className="shop-hero__subtitle">
@@ -319,6 +324,8 @@ function App() {
                 little one.
               </p>
             </div>
+
+            <LifestyleStrip />
 
             <h2 className="section-title">Our favourites</h2>
 
@@ -372,6 +379,7 @@ function App() {
               No online card payment required.
             </p>
           </section>
+          </>
         )}
 
         {activePage === 'info' && (

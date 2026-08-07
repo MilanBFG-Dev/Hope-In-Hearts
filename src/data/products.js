@@ -11,7 +11,19 @@ import brush from '../Images/products/image10.png';
 import brushCombSet from '../Images/products/image11.png';
 import comb from '../Images/products/image12.png';
 import brushCombDims from '../Images/products/image13.png';
-import colourChartSimple from '../Images/colour-chart-simple.png';
+import nameBlocksLara from '../Images/products/image14.png';
+import nameBlocksSage from '../Images/products/image15.png';
+import nameBlocksFinn from '../Images/products/image16.png';
+import nameBlocksSageLeaf from '../Images/products/image17.png';
+import nameBlocksIsla from '../Images/products/image18.png';
+import nameBlocksSofie from '../Images/products/image19.png';
+import nameBlocksNealRattle from '../Images/products/image20.png';
+import nameBlocksNealStar from '../Images/products/image21.png';
+import woodenLettersBaby from '../Images/products/image22.png';
+import woodenLettersSizes from '../Images/products/image23.png';
+import woodenLettersAbcd from '../Images/products/image24.png';
+import woodenLettersBabyNames from '../Images/products/image25.png';
+import woodenLettersPatterns from '../Images/products/image26.png';
 
 /** Hope in Hearts colour palette — from official colour chart */
 export const COLOUR_PALETTE = [
@@ -32,6 +44,9 @@ export const COLOUR_PALETTE = [
 
 const ALL_COLOURS = COLOUR_PALETTE;
 
+const CROCHET_BUNNY_COLOURS = COLOUR_PALETTE.slice(0, 3);
+const RATTLE_COLOURS = [COLOUR_PALETTE[2], COLOUR_PALETTE[4]];
+
 export const PRODUCTS = [
   {
     id: 'crochet-bunny',
@@ -42,7 +57,7 @@ export const PRODUCTS = [
       'Our adorable handcrafted crochet bunny is the perfect companion for little ones. Lovingly made from soft cotton yarn, each bunny is designed for tiny hands to cuddle, play with, and treasure. Whether you\'re welcoming a new baby or looking for a thoughtful baby shower gift, this timeless bunny makes a beautiful keepsake. Approximately 23 cm / 9 in tall.',
     image: crochetBunnyWhite,
     images: [crochetBunnyWhite, crochetBunnyGrey, crochetBunnyStone, crochetBunnySize, crochetBunnyGroup],
-    colors: ALL_COLOURS,
+    colors: CROCHET_BUNNY_COLOURS,
     showColourChart: true,
     options: [],
     personalisationLabel: 'Gift message (optional)',
@@ -57,7 +72,7 @@ export const PRODUCTS = [
       'A gentle wooden ring rattle with a soft crochet bunny head — perfect for newborn gifts, baby showers, and nursery décor. The natural wooden ring is ideal for teething, while the lovingly crocheted bunny adds a charming touch. Approximately 15 cm tall with a 6 cm ring.',
     image: rattleGrey,
     images: [rattleGrey, rattleGreyLife, rattlePink, rattlePinkLife],
-    colors: ALL_COLOURS,
+    colors: RATTLE_COLOURS,
     showColourChart: true,
     options: [],
     personalisationLabel: 'Gift message (optional)',
@@ -100,8 +115,17 @@ export const PRODUCTS = [
     tagline: 'Hand-painted keepsake blocks',
     description:
       'Create a beautiful, one-of-a-kind keepsake with our personalised wooden name blocks. Thoughtfully handcrafted and painted in your choice of soft, timeless colours — the perfect finishing touch for a nursery, child\'s bedroom, or playroom. Each block measures 6 × 6 cm. Each set is handmade to order.',
-    image: colourChartSimple,
-    images: [colourChartSimple],
+    image: nameBlocksLara,
+    images: [
+      nameBlocksLara,
+      nameBlocksSage,
+      nameBlocksFinn,
+      nameBlocksSageLeaf,
+      nameBlocksIsla,
+      nameBlocksSofie,
+      nameBlocksNealRattle,
+      nameBlocksNealStar,
+    ],
     colors: ALL_COLOURS,
     showColourChart: true,
     options: [
@@ -122,8 +146,14 @@ export const PRODUCTS = [
     tagline: 'Spell their name in style',
     description:
       'Create a space that\'s uniquely theirs with our handcrafted personalised wooden name letters. Perfect for spelling out your child\'s name above a bed, cot, or bedroom door. Each letter is individually painted in your choice of colours and designs. Available in Large (11 cm) or Small (7.5 cm). Each letter is handmade to order.',
-    image: colourChartSimple,
-    images: [colourChartSimple],
+    image: woodenLettersBaby,
+    images: [
+      woodenLettersBaby,
+      woodenLettersSizes,
+      woodenLettersAbcd,
+      woodenLettersBabyNames,
+      woodenLettersPatterns,
+    ],
     colors: ALL_COLOURS,
     showColourChart: true,
     options: [

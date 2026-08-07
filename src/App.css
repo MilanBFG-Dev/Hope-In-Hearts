@@ -24,6 +24,7 @@
   --radius: 16px;
   --radius-lg: 24px;
   --header-h: 72px;
+  --site-top-h: 188px;
   --transition: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 
   display: flex;
@@ -33,6 +34,17 @@
   color: var(--text);
   position: relative;
   overflow-x: hidden;
+}
+
+/* ---------------------------------------
+   Site top (promo + header + nav)
+--------------------------------------- */
+.site-top {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--white);
+  box-shadow: 0 1px 0 var(--grey-light);
 }
 
 /* ---------------------------------------
@@ -67,9 +79,8 @@
   padding: 0.75rem 1rem;
   min-height: var(--header-h);
   background: var(--white);
-  position: sticky;
-  top: 0;
-  z-index: 100;
+  position: relative;
+  z-index: 1;
 }
 
 .site-header__logo {
@@ -286,6 +297,8 @@
   width: 100%;
   margin: 0 auto;
   box-sizing: border-box;
+  position: relative;
+  z-index: 1;
 }
 
 .fade-in {
@@ -319,6 +332,11 @@
 }
 
 /* Shop hero */
+.shop-section {
+  position: relative;
+  z-index: 1;
+}
+
 .shop-hero {
   text-align: center;
   padding: 1.5rem 0.5rem 2rem;
@@ -348,6 +366,186 @@
   color: var(--ink);
   text-align: center;
   margin: 0 0 1.25rem;
+}
+
+/* Lifestyle flow — side columns (desktop) */
+.lifestyle-flow {
+  display: none;
+}
+
+.lifestyle-strip {
+  overflow: hidden;
+  margin: 0 -1rem 1.5rem;
+  padding: 0.5rem 0;
+  mask-image: linear-gradient(to right, transparent, #000 8%, #000 92%, transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 8%, #000 92%, transparent);
+}
+
+.lifestyle-strip__track {
+  display: flex;
+  gap: 0.75rem;
+  width: max-content;
+  animation: lifestyle-strip-scroll 45s linear infinite;
+}
+
+.lifestyle-strip__frame {
+  flex-shrink: 0;
+  width: 140px;
+  height: 100px;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(61, 61, 61, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+}
+
+.lifestyle-strip__frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+@keyframes lifestyle-strip-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@media (min-width: 1100px) {
+  .lifestyle-flow {
+    display: block;
+    position: fixed;
+    top: var(--site-top-h, 200px);
+    left: 0;
+    right: 0;
+    bottom: var(--site-footer-offset, 0px);
+    pointer-events: none;
+    z-index: 0;
+    overflow: hidden;
+  }
+
+  .lifestyle-flow__column {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: clamp(130px, 11vw, 175px);
+    overflow: hidden;
+    transform: translateX(-50%);
+    mask-image: linear-gradient(
+      to bottom,
+      #000 0%,
+      #000 88%,
+      transparent 100%
+    );
+    -webkit-mask-image: linear-gradient(
+      to bottom,
+      #000 0%,
+      #000 88%,
+      transparent 100%
+    );
+  }
+
+  .lifestyle-flow__column--up {
+    left: max(1.5rem, calc((100vw - min(1200px, 100vw)) / 4));
+  }
+
+  .lifestyle-flow__column--down {
+    left: calc(100vw - max(1.5rem, calc((100vw - min(1200px, 100vw)) / 4)));
+  }
+
+  .lifestyle-flow__track {
+    display: flex;
+    flex-direction: column;
+    gap: 4rem;
+    will-change: transform;
+  }
+
+  .lifestyle-flow__column--up .lifestyle-flow__track {
+    padding-top: 1.5rem;
+    animation: lifestyle-flow-up 75s linear infinite;
+  }
+
+  .lifestyle-flow__column--down .lifestyle-flow__track {
+    padding-top: 11rem;
+    animation: lifestyle-flow-down 90s linear infinite;
+  }
+
+  .lifestyle-flow__frame {
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 8px 28px rgba(61, 61, 61, 0.12);
+    border: 2px solid rgba(255, 255, 255, 0.65);
+    opacity: 0.88;
+    transition: opacity 0.4s ease;
+  }
+
+  .lifestyle-flow__column--up .lifestyle-flow__frame:nth-child(odd) {
+    margin-left: 0;
+    margin-right: 1.25rem;
+  }
+
+  .lifestyle-flow__column--up .lifestyle-flow__frame:nth-child(even) {
+    margin-left: 1.25rem;
+    margin-right: 0;
+  }
+
+  .lifestyle-flow__column--down .lifestyle-flow__frame:nth-child(odd) {
+    margin-left: 1.25rem;
+    margin-right: 0;
+  }
+
+  .lifestyle-flow__column--down .lifestyle-flow__frame:nth-child(even) {
+    margin-left: 0;
+    margin-right: 1.25rem;
+  }
+
+  .lifestyle-flow__frame img {
+    width: 100%;
+    height: auto;
+    display: block;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+  }
+
+  .lifestyle-strip {
+    display: none;
+  }
+
+  @keyframes lifestyle-flow-up {
+    from {
+      transform: translateY(0);
+    }
+    to {
+      transform: translateY(-50%);
+    }
+  }
+
+  @keyframes lifestyle-flow-down {
+    from {
+      transform: translateY(-50%);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lifestyle-flow__track,
+  .lifestyle-strip__track {
+    animation: none;
+  }
+
+  .lifestyle-strip__track {
+    overflow-x: auto;
+    width: 100%;
+    justify-content: center;
+    flex-wrap: wrap;
+    padding: 0 1rem;
+  }
 }
 
 /* Product grid */
@@ -1347,6 +1545,8 @@
    Footer
 --------------------------------------- */
 .footer {
+  position: relative;
+  z-index: 10;
   background: linear-gradient(135deg, var(--ink) 0%, #525252 100%);
   color: var(--white);
   text-align: center;
