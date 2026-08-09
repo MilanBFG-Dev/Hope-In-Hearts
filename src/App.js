@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import './App.css';
 import Logo from './Images/logo.png';
-import { PRODUCTS, ORDER_EMAIL, BUSINESS, formatPrice } from './data/products';
+import { PRODUCTS, ORDER_EMAIL, BUSINESS, formatPrice, getProductImageForColor, getProductImageIndex } from './data/products';
 import { sendOrderEmail, isValidEmail } from './utils/orderEmail';
 import { isOrderEmailConfigured } from './config/emailService';
 import LifestyleFlow, { LifestyleStrip } from './components/LifestyleFlow';
@@ -64,7 +64,7 @@ function App() {
       quantity: 1,
       personalisation: '',
     });
-    setModalImageIndex(0);
+    setModalImageIndex(getProductImageIndex(product, defaultColor.id));
     setSelectedProduct(product);
     setModalVisible(true);
     document.body.style.overflow = 'hidden';
@@ -105,7 +105,17 @@ function App() {
       : selectedProduct
         ? [selectedProduct.image]
         : [];
-  const activeModalImage = modalImages[modalImageIndex] ?? selectedProduct?.image;
+  const activeModalImage =
+    modalImages[modalImageIndex] ??
+    getProductImageForColor(selectedProduct, selection.colorId) ??
+    selectedProduct?.image;
+
+  const selectColor = (colorId) => {
+    setSelection((s) => ({ ...s, colorId }));
+    if (selectedProduct) {
+      setModalImageIndex(getProductImageIndex(selectedProduct, colorId));
+    }
+  };
 
   const addToCart = () => {
     if (!selectedProduct || !selectedColor) return;
@@ -119,6 +129,7 @@ function App() {
       id: `${selectedProduct.id}-${Date.now()}`,
       productId: selectedProduct.id,
       name: selectedProduct.name,
+      image: getProductImageForColor(selectedProduct, selectedColor.id),
       price: selectedProduct.priceOnRequest ? 0 : selectedProduct.price,
       priceOnRequest: !!selectedProduct.priceOnRequest,
       colorName: selectedColor.name,
@@ -557,7 +568,7 @@ function App() {
                           selection.colorId === c.id ? 'color-swatch--active' : ''
                         } ${c.id === 'white' ? 'color-swatch--white' : ''}`}
                         style={{ backgroundColor: c.hex }}
-                        onClick={() => setSelection((s) => ({ ...s, colorId: c.id }))}
+                        onClick={() => selectColor(c.id)}
                         aria-label={c.name}
                         title={c.name}
                       />
@@ -690,10 +701,18 @@ function App() {
               <ul className="cart-list">
                 {cart.map((item) => (
                   <li key={item.id} className="cart-item">
-                    <div
-                      className="cart-item__swatch"
-                      style={{ background: item.colorHex }}
-                    />
+                    {item.image ? (
+                      <img
+                        src={item.image}
+                        alt=""
+                        className="cart-item__thumb"
+                      />
+                    ) : (
+                      <div
+                        className="cart-item__swatch"
+                        style={{ background: item.colorHex }}
+                      />
+                    )}
                     <div className="cart-item__info">
                       <strong>{item.name}</strong>
                       <span className="cart-item__meta">{item.colorName}</span>

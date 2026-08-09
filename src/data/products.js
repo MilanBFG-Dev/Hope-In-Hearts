@@ -47,67 +47,19 @@ const ALL_COLOURS = COLOUR_PALETTE;
 const CROCHET_BUNNY_COLOURS = COLOUR_PALETTE.slice(0, 3);
 const RATTLE_COLOURS = [COLOUR_PALETTE[2], COLOUR_PALETTE[4]];
 
+export function getProductImageForColor(product, colorId) {
+  if (!product) return null;
+  if (colorId && product.colorImages?.[colorId]) return product.colorImages[colorId];
+  return product.image;
+}
+
+export function getProductImageIndex(product, colorId) {
+  const image = getProductImageForColor(product, colorId);
+  const index = product.images?.indexOf(image);
+  return index >= 0 ? index : 0;
+}
+
 export const PRODUCTS = [
-  {
-    id: 'crochet-bunny',
-    name: 'Handcrafted Crochet Bunny',
-    price: 150,
-    tagline: 'Soft cotton companion for little hands',
-    description:
-      'Our adorable handcrafted crochet bunny is the perfect companion for little ones. Lovingly made from soft cotton yarn, each bunny is designed for tiny hands to cuddle, play with, and treasure. Whether you\'re welcoming a new baby or looking for a thoughtful baby shower gift, this timeless bunny makes a beautiful keepsake. Approximately 23 cm / 9 in tall.',
-    image: crochetBunnyWhite,
-    images: [crochetBunnyWhite, crochetBunnyGrey, crochetBunnyStone, crochetBunnySize, crochetBunnyGroup],
-    colors: CROCHET_BUNNY_COLOURS,
-    showColourChart: true,
-    options: [],
-    personalisationLabel: 'Gift message (optional)',
-    personalisationPlaceholder: 'e.g. With love, from Grandma',
-  },
-  {
-    id: 'crochet-bunny-rattle',
-    name: 'Crochet Bunny Rattle Teether',
-    price: 95,
-    tagline: 'Wooden ring rattle with soft bunny head',
-    description:
-      'A gentle wooden ring rattle with a soft crochet bunny head — perfect for newborn gifts, baby showers, and nursery décor. The natural wooden ring is ideal for teething, while the lovingly crocheted bunny adds a charming touch. Approximately 15 cm tall with a 6 cm ring.',
-    image: rattleGrey,
-    images: [rattleGrey, rattleGreyLife, rattlePink, rattlePinkLife],
-    colors: RATTLE_COLOURS,
-    showColourChart: true,
-    options: [],
-    personalisationLabel: 'Gift message (optional)',
-    personalisationPlaceholder: 'e.g. Welcome little one',
-  },
-  {
-    id: 'baby-hairbrush',
-    name: 'Beech Wood Baby Hairbrush',
-    price: 75,
-    tagline: 'Ultra-soft goat hair bristles',
-    description:
-      'Care for your little one\'s delicate hair and scalp with our beech wood baby hairbrush. Made from natural beech wood with ultra-soft goat hair bristles that gently smooth fine baby hair while providing a soothing scalp massage. Suitable from birth. Approximately 15 cm long.',
-    image: brush,
-    images: [brush, brushCombSet, brushCombDims],
-    colors: [{ id: 'natural', name: 'Natural Beech Wood', hex: '#D4B896' }],
-    showColourChart: false,
-    options: [],
-    personalisationLabel: 'Gift message (optional)',
-    personalisationPlaceholder: 'Optional note',
-  },
-  {
-    id: 'baby-comb',
-    name: 'Beech Wood Baby Comb',
-    price: 45,
-    tagline: 'Gentle wide-tooth wooden comb',
-    description:
-      'A beautiful beech wood baby comb with wide, rounded teeth — gentle on delicate newborn skin and fine baby hair. Part of our timeless newborn essentials range. Approximately 14.5 cm long.',
-    image: comb,
-    images: [comb, brushCombSet, brushCombDims],
-    colors: [{ id: 'natural', name: 'Natural Beech Wood', hex: '#D4B896' }],
-    showColourChart: false,
-    options: [],
-    personalisationLabel: 'Gift message (optional)',
-    personalisationPlaceholder: 'Optional note',
-  },
   {
     id: 'name-blocks',
     name: 'Personalised Wooden Name Blocks',
@@ -126,13 +78,28 @@ export const PRODUCTS = [
       nameBlocksNealRattle,
       nameBlocksNealStar,
     ],
+    colorImages: {
+      white: nameBlocksLara,
+      stone: nameBlocksNealStar,
+      'light-grey': nameBlocksFinn,
+      'dark-grey': nameBlocksSageLeaf,
+      'baby-pink': nameBlocksIsla,
+      'dusty-pink': nameBlocksLara,
+      'dark-pink': nameBlocksIsla,
+      'baby-blue': nameBlocksFinn,
+      'duck-egg-blue': nameBlocksFinn,
+      'dark-blue': nameBlocksNealStar,
+      'mint-green': nameBlocksSage,
+      'sage-green': nameBlocksSage,
+      'lemon-yellow': nameBlocksSofie,
+    },
     colors: ALL_COLOURS,
     showColourChart: true,
     options: [
       {
         id: 'lettering',
         label: 'Lettering style',
-        choices: ['Script', 'Block', 'Serif', 'Mixed (we\'ll confirm with you)'],
+        choices: ['Vinyl', 'Natural wood'],
       },
     ],
     personalisationLabel: 'Baby\'s name *',
@@ -154,6 +121,21 @@ export const PRODUCTS = [
       woodenLettersBabyNames,
       woodenLettersPatterns,
     ],
+    colorImages: {
+      white: woodenLettersBaby,
+      stone: woodenLettersBabyNames,
+      'light-grey': woodenLettersBabyNames,
+      'dark-grey': woodenLettersAbcd,
+      'baby-pink': woodenLettersBaby,
+      'dusty-pink': woodenLettersBaby,
+      'dark-pink': woodenLettersPatterns,
+      'baby-blue': woodenLettersAbcd,
+      'duck-egg-blue': woodenLettersAbcd,
+      'dark-blue': woodenLettersBabyNames,
+      'mint-green': woodenLettersAbcd,
+      'sage-green': woodenLettersAbcd,
+      'lemon-yellow': woodenLettersBabyNames,
+    },
     colors: ALL_COLOURS,
     showColourChart: true,
     options: [
@@ -171,6 +153,81 @@ export const PRODUCTS = [
     personalisationLabel: 'Letters / name *',
     personalisationPlaceholder: 'e.g. EMMA or Emma',
     personalisationRequired: true,
+  },
+  {
+    id: 'crochet-bunny',
+    name: 'Handcrafted Crochet Bunny',
+    price: 150,
+    tagline: 'Soft cotton companion for little hands',
+    description:
+      'Our adorable handcrafted crochet bunny is the perfect companion for little ones. Lovingly made from soft cotton yarn, each bunny is designed for tiny hands to cuddle, play with, and treasure. Whether you\'re welcoming a new baby or looking for a thoughtful baby shower gift, this timeless bunny makes a beautiful keepsake. Approximately 23 cm / 9 in tall.',
+    image: crochetBunnyWhite,
+    images: [crochetBunnyWhite, crochetBunnyGrey, crochetBunnyStone, crochetBunnySize, crochetBunnyGroup],
+    colorImages: {
+      white: crochetBunnyWhite,
+      stone: crochetBunnyStone,
+      'light-grey': crochetBunnyGrey,
+    },
+    colors: CROCHET_BUNNY_COLOURS,
+    showColourChart: true,
+    options: [],
+    personalisationLabel: 'Gift message (optional)',
+    personalisationPlaceholder: 'e.g. With love, from Grandma',
+  },
+  {
+    id: 'crochet-bunny-rattle',
+    name: 'Crochet Bunny Rattle Teether',
+    price: 95,
+    tagline: 'Wooden ring rattle with soft bunny head',
+    description:
+      'A gentle wooden ring rattle with a soft crochet bunny head — perfect for newborn gifts, baby showers, and nursery décor. The natural wooden ring is ideal for teething, while the lovingly crocheted bunny adds a charming touch. Approximately 15 cm tall with a 6 cm ring.',
+    image: rattleGreyLife,
+    images: [rattleGreyLife, rattlePinkLife, rattleGrey, rattlePink],
+    colorImages: {
+      'light-grey': rattleGreyLife,
+      'baby-pink': rattlePinkLife,
+    },
+    colors: RATTLE_COLOURS,
+    showColourChart: true,
+    options: [],
+    personalisationLabel: 'Gift message (optional)',
+    personalisationPlaceholder: 'e.g. Welcome little one',
+  },
+  {
+    id: 'baby-hairbrush',
+    name: 'Beech Wood Baby Hairbrush',
+    price: 75,
+    tagline: 'Ultra-soft goat hair bristles',
+    description:
+      'Care for your little one\'s delicate hair and scalp with our beech wood baby hairbrush. Made from natural beech wood with ultra-soft goat hair bristles that gently smooth fine baby hair while providing a soothing scalp massage. Suitable from birth. Approximately 15 cm long.',
+    image: brush,
+    images: [brush, brushCombSet, brushCombDims],
+    colorImages: {
+      natural: brush,
+    },
+    colors: [{ id: 'natural', name: 'Natural Beech Wood', hex: '#D4B896' }],
+    showColourChart: false,
+    options: [],
+    personalisationLabel: 'Gift message (optional)',
+    personalisationPlaceholder: 'Optional note',
+  },
+  {
+    id: 'baby-comb',
+    name: 'Beech Wood Baby Comb',
+    price: 45,
+    tagline: 'Gentle wide-tooth wooden comb',
+    description:
+      'A beautiful beech wood baby comb with wide, rounded teeth — gentle on delicate newborn skin and fine baby hair. Part of our timeless newborn essentials range. Approximately 14.5 cm long.',
+    image: comb,
+    images: [comb, brushCombSet, brushCombDims],
+    colorImages: {
+      natural: comb,
+    },
+    colors: [{ id: 'natural', name: 'Natural Beech Wood', hex: '#D4B896' }],
+    showColourChart: false,
+    options: [],
+    personalisationLabel: 'Gift message (optional)',
+    personalisationPlaceholder: 'Optional note',
   },
 ];
 

@@ -1236,11 +1236,18 @@
   align-items: flex-start;
 }
 
-.cart-item__swatch {
+.cart-item__swatch,
+.cart-item__thumb {
   width: 48px;
   height: 48px;
   border-radius: 12px;
   flex-shrink: 0;
+}
+
+.cart-item__thumb {
+  object-fit: cover;
+  border: 1px solid rgba(154, 154, 154, 0.2);
+  background: var(--white);
 }
 
 .cart-item__info {
