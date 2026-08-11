@@ -839,105 +839,107 @@ function App() {
             <p className="cart-empty">Your bag is empty — tap a product to start.</p>
           ) : (
             <>
-              <ul className="cart-list">
-                {cart.map((item) => (
-                  <li key={item.id} className="cart-item">
-                    {item.image ? (
-                      <img
-                        src={item.image}
-                        alt=""
-                        className="cart-item__thumb"
-                      />
-                    ) : (
-                      <div
-                        className="cart-item__swatch"
-                        style={{ background: item.colorHex }}
-                      />
-                    )}
-                    <div className="cart-item__info">
-                      <strong>{item.name}</strong>
-                      {item.letterColors?.length > 0 ? (
-                        <>
-                          <span className="cart-item__meta">
-                            Name: {item.personalisation}
-                          </span>
-                          <div className="cart-item__letters" aria-label="Letter colours">
-                            {item.letterColors.map(({ letter, colorHex, colorName }, index) => (
-                              <span
-                                key={`${item.id}-${letter}-${index}`}
-                                className="cart-letter-chip"
-                                style={{
-                                  backgroundColor: colorHex,
-                                  color: isDarkColor(colorHex) ? '#FFFFFF' : '#3D3D3D',
-                                }}
-                                title={`${letter}: ${colorName}`}
-                              >
-                                {letter}
-                              </span>
-                            ))}
-                          </div>
-                          <span className="cart-item__meta cart-item__meta--letters">
-                            {item.letterColors
-                              .map(({ letter, colorName }) => `${letter}: ${colorName}`)
-                              .join(' · ')}
-                          </span>
-                        </>
+              <div className="cart-drawer__items">
+                <ul className="cart-list">
+                  {cart.map((item) => (
+                    <li key={item.id} className="cart-item">
+                      {item.image ? (
+                        <img
+                          src={item.image}
+                          alt=""
+                          className="cart-item__thumb"
+                        />
                       ) : (
-                        <span className="cart-item__meta">{item.colorName}</span>
+                        <div
+                          className="cart-item__swatch"
+                          style={{ background: item.colorHex }}
+                        />
                       )}
-                      {(item.optionLines ||
-                        Object.entries(item.options).map(([k, v]) => ({
-                          label: k,
-                          value: v,
-                        }))
-                      ).map(({ label, value }) => (
-                        <span key={`${label}-${value}`} className="cart-item__meta">
-                          {label}: {value}
-                        </span>
-                      ))}
-                      {item.personalisation && (
-                        <span className="cart-item__meta">
-                          &ldquo;{item.personalisation}&rdquo;
-                        </span>
-                      )}
-                      <div className="cart-item__actions">
-                        <div className="quantity-control quantity-control--small">
-                          <button
-                            type="button"
-                            className="qty-btn"
-                            onClick={() => updateCartQty(item.id, -1)}
-                            aria-label="Decrease"
-                          >
-                            <RemoveIcon fontSize="small" />
-                          </button>
-                          <span>{item.quantity}</span>
-                          <button
-                            type="button"
-                            className="qty-btn"
-                            onClick={() => updateCartQty(item.id, 1)}
-                            aria-label="Increase"
-                          >
-                            <AddIcon fontSize="small" />
-                          </button>
+                      <div className="cart-item__info">
+                        <strong>{item.name}</strong>
+                        {item.letterColors?.length > 0 ? (
+                          <>
+                            <span className="cart-item__meta">
+                              Name: {item.personalisation}
+                            </span>
+                            <div className="cart-item__letters" aria-label="Letter colours">
+                              {item.letterColors.map(({ letter, colorHex, colorName }, index) => (
+                                <span
+                                  key={`${item.id}-${letter}-${index}`}
+                                  className="cart-letter-chip"
+                                  style={{
+                                    backgroundColor: colorHex,
+                                    color: isDarkColor(colorHex) ? '#FFFFFF' : '#3D3D3D',
+                                  }}
+                                  title={`${letter}: ${colorName}`}
+                                >
+                                  {letter}
+                                </span>
+                              ))}
+                            </div>
+                            <span className="cart-item__meta cart-item__meta--letters">
+                              {item.letterColors
+                                .map(({ letter, colorName }) => `${letter}: ${colorName}`)
+                                .join(' · ')}
+                            </span>
+                          </>
+                        ) : (
+                          <span className="cart-item__meta">{item.colorName}</span>
+                        )}
+                        {(item.optionLines ||
+                          Object.entries(item.options).map(([k, v]) => ({
+                            label: k,
+                            value: v,
+                          }))
+                        ).map(({ label, value }) => (
+                          <span key={`${label}-${value}`} className="cart-item__meta">
+                            {label}: {value}
+                          </span>
+                        ))}
+                        {item.personalisation && !item.letterColors?.length && (
+                          <span className="cart-item__meta">
+                            &ldquo;{item.personalisation}&rdquo;
+                          </span>
+                        )}
+                        <div className="cart-item__actions">
+                          <div className="quantity-control quantity-control--small">
+                            <button
+                              type="button"
+                              className="qty-btn"
+                              onClick={() => updateCartQty(item.id, -1)}
+                              aria-label="Decrease"
+                            >
+                              <RemoveIcon fontSize="small" />
+                            </button>
+                            <span>{item.quantity}</span>
+                            <button
+                              type="button"
+                              className="qty-btn"
+                              onClick={() => updateCartQty(item.id, 1)}
+                              aria-label="Increase"
+                            >
+                              <AddIcon fontSize="small" />
+                            </button>
+                          </div>
+                          <span className="cart-item__price">
+                            {item.priceOnRequest
+                              ? 'Price on request'
+                              : `R${item.price * item.quantity}`}
+                          </span>
                         </div>
-                        <span className="cart-item__price">
-                          {item.priceOnRequest
-                            ? 'Price on request'
-                            : `R${item.price * item.quantity}`}
-                        </span>
                       </div>
-                    </div>
-                    <button
-                      type="button"
-                      className="cart-item__remove"
-                      onClick={() => removeFromCart(item.id)}
-                      aria-label="Remove item"
-                    >
-                      ×
-                    </button>
-                  </li>
-                ))}
-              </ul>
+                      <button
+                        type="button"
+                        className="cart-item__remove"
+                        onClick={() => removeFromCart(item.id)}
+                        aria-label="Remove item"
+                      >
+                        ×
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
 
               <div className="cart-footer">
                 <div className="cart-total">
