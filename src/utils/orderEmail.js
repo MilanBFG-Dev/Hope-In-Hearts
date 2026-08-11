@@ -31,9 +31,24 @@ function formatItemBlock(item, index) {
     : formatMoney(item.price * item.quantity);
   const lines = [
     `${index + 1}) ${item.name} ×${item.quantity} — ${priceLine}`,
-    `   ${item.colorName}${opts.length ? ' | ' + opts.join(' | ') : ''}`,
   ];
-  if (item.personalisation) {
+
+  if (item.letterColors?.length) {
+    lines.push(`   Name: "${item.personalisation || '—'}"`);
+    lines.push(
+      `   Letter colours: ${item.letterColors
+        .map(({ letter, colorName }) => `${letter}=${colorName}`)
+        .join(', ')}`
+    );
+  } else {
+    lines.push(`   ${item.colorName}${opts.length ? ' | ' + opts.join(' | ') : ''}`);
+  }
+
+  if (opts.length && item.letterColors?.length) {
+    lines.push(`   ${opts.join(' | ')}`);
+  }
+
+  if (item.personalisation && !item.letterColors?.length) {
     lines.push(`   Text: "${item.personalisation}"`);
   }
   return lines.join('\n');

@@ -5,6 +5,13 @@ import { PRODUCTS, ORDER_EMAIL, BUSINESS, formatPrice, getProductImageForColor, 
 import { sendOrderEmail, isValidEmail } from './utils/orderEmail';
 import { isOrderEmailConfigured } from './config/emailService';
 import LifestyleFlow, { LifestyleStrip } from './components/LifestyleFlow';
+import {
+  parseNameLetters,
+  syncLetterColors,
+  resolveLetterColors,
+  formatLetterColorsSummary,
+  isDarkColor,
+} from './utils/letterColors';
 
 import MenuIcon from '@mui/icons-material/Menu';
 import CloseIcon from '@mui/icons-material/Close';
@@ -47,6 +54,7 @@ function App() {
     options: {},
     quantity: 1,
     personalisation: '',
+    letterColors: [],
   });
   const [modalImageIndex, setModalImageIndex] = useState(0);
 
@@ -63,6 +71,7 @@ function App() {
       options: defaultOptions,
       quantity: 1,
       personalisation: '',
+      letterColors: [],
     });
     setModalImageIndex(getProductImageIndex(product, defaultColor.id));
     setSelectedProduct(product);
@@ -117,6 +126,48 @@ function App() {
     }
   };
 
+  const nameLetters = selectedProduct?.perLetterColors
+    ? parseNameLetters(selection.personalisation)
+    : [];
+
+  const resolvedLetterColors = selectedProduct?.perLetterColors
+    ? resolveLetterColors(selection.letterColors, selectedProduct.colors)
+    : [];
+
+  const updatePersonalisation = (value) => {
+    if (selectedProduct?.perLetterColors) {
+      const letters = parseNameLetters(value);
+      setSelection((s) => ({
+        ...s,
+        personalisation: value,
+        letterColors: syncLetterColors(
+          letters,
+          s.letterColors,
+          selectedProduct.colors[0].id
+        ),
+      }));
+      return;
+    }
+    setSelection((s) => ({ ...s, personalisation: value }));
+  };
+
+  const selectLetterColor = (index, colorId) => {
+    setSelection((s) => ({
+      ...s,
+      letterColors: s.letterColors.map((entry, i) =>
+        i === index ? { ...entry, colorId } : entry
+      ),
+    }));
+    if (selectedProduct) {
+      setModalImageIndex(getProductImageIndex(selectedProduct, colorId));
+    }
+  };
+
+  const letterColorsComplete =
+    !selectedProduct?.perLetterColors ||
+    (nameLetters.length > 0 &&
+      selection.letterColors.length === nameLetters.length);
+
   const addToCart = () => {
     if (!selectedProduct || !selectedColor) return;
     if (
@@ -125,15 +176,33 @@ function App() {
     ) {
       return;
     }
+    if (selectedProduct.perLetterColors && !letterColorsComplete) {
+      return;
+    }
+
+    const letterColorDetails = selectedProduct.perLetterColors
+      ? resolveLetterColors(selection.letterColors, selectedProduct.colors)
+      : null;
+
     const cartItem = {
       id: `${selectedProduct.id}-${Date.now()}`,
       productId: selectedProduct.id,
       name: selectedProduct.name,
-      image: getProductImageForColor(selectedProduct, selectedColor.id),
+      image: selectedProduct.perLetterColors
+        ? getProductImageForColor(
+            selectedProduct,
+            letterColorDetails[0]?.colorId ?? selectedColor.id
+          )
+        : getProductImageForColor(selectedProduct, selectedColor.id),
       price: selectedProduct.priceOnRequest ? 0 : selectedProduct.price,
       priceOnRequest: !!selectedProduct.priceOnRequest,
-      colorName: selectedColor.name,
-      colorHex: selectedColor.hex,
+      colorName: selectedProduct.perLetterColors
+        ? formatLetterColorsSummary(letterColorDetails)
+        : selectedColor.name,
+      colorHex: selectedProduct.perLetterColors
+        ? letterColorDetails[0]?.colorHex ?? selectedColor.hex
+        : selectedColor.hex,
+      letterColors: letterColorDetails,
       options: { ...selection.options },
       optionLines: selectedProduct.options.map((o) => ({
         label: o.label,
@@ -556,7 +625,7 @@ function App() {
               </p>
               <p className="product-modal__desc">{selectedProduct.description}</p>
 
-              {selectedProduct.colors.length > 1 && (
+              {selectedProduct.colors.length > 1 && !selectedProduct.perLetterColors && (
                 <div className="option-group">
                   <span className="option-label">Colour</span>
                   <div className="color-picker">
@@ -615,12 +684,83 @@ function App() {
                     selectedProduct.personalisationPlaceholder || 'e.g. Emma Rose'
                   }
                   value={selection.personalisation}
-                  onChange={(e) =>
-                    setSelection((s) => ({ ...s, personalisation: e.target.value }))
-                  }
+                  onChange={(e) => updatePersonalisation(e.target.value)}
                   required={selectedProduct.personalisationRequired}
                 />
               </div>
+
+              {selectedProduct.perLetterColors && (
+                <div className="letter-colors">
+                  <p className="letter-colors__intro">
+                    {selectedProduct.perLetterColorsIntro ??
+                      'Each letter is painted separately — pick a colour for every letter in the name.'}
+                  </p>
+
+                  {nameLetters.length > 0 ? (
+                    <>
+                      <div className="letter-colors__preview" aria-hidden="true">
+                        {resolvedLetterColors.map(({ letter, colorHex }, index) => (
+                          <span
+                            key={`preview-${index}-${letter}`}
+                            className="letter-colors__preview-char"
+                            style={{
+                              backgroundColor: colorHex,
+                              color: isDarkColor(colorHex) ? '#FFFFFF' : '#3D3D3D',
+                            }}
+                          >
+                            {letter}
+                          </span>
+                        ))}
+                      </div>
+
+                      <p className="letter-colors__count">
+                        {nameLetters.length} letter{nameLetters.length !== 1 ? 's' : ''} — choose
+                        a colour for each one below
+                      </p>
+
+                      <div className="letter-colors__list">
+                        {resolvedLetterColors.map(({ letter, colorId, colorName, colorHex }, index) => (
+                          <div className="letter-color-row" key={`${letter}-${index}`}>
+                            <span
+                              className="letter-color-row__badge"
+                              style={{
+                                backgroundColor: colorHex,
+                                color: isDarkColor(colorHex) ? '#FFFFFF' : '#3D3D3D',
+                              }}
+                            >
+                              {letter}
+                            </span>
+                            <div className="letter-color-row__picker">
+                              <span className="letter-color-row__label">
+                                Letter {index + 1} · {colorName}
+                              </span>
+                              <div className="color-picker color-picker--compact">
+                                {selectedProduct.colors.map((c) => (
+                                  <button
+                                    key={c.id}
+                                    type="button"
+                                    className={`color-swatch ${
+                                      colorId === c.id ? 'color-swatch--active' : ''
+                                    } ${c.id === 'white' ? 'color-swatch--white' : ''}`}
+                                    style={{ backgroundColor: c.hex }}
+                                    onClick={() => selectLetterColor(index, c.id)}
+                                    aria-label={`${letter} — ${c.name}`}
+                                    title={c.name}
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  ) : (
+                    <p className="letter-colors__empty">
+                      Type a name above to start choosing colours for each letter.
+                    </p>
+                  )}
+                </div>
+              )}
 
               <div className="option-group quantity-row">
                 <span className="option-label">Quantity</span>
@@ -657,8 +797,9 @@ function App() {
                 className="btn-primary"
                 onClick={addToCart}
                 disabled={
-                  selectedProduct.personalisationRequired &&
-                  !selection.personalisation.trim()
+                  (selectedProduct.personalisationRequired &&
+                    !selection.personalisation.trim()) ||
+                  !letterColorsComplete
                 }
               >
                 Add to bag
@@ -715,7 +856,35 @@ function App() {
                     )}
                     <div className="cart-item__info">
                       <strong>{item.name}</strong>
-                      <span className="cart-item__meta">{item.colorName}</span>
+                      {item.letterColors?.length > 0 ? (
+                        <>
+                          <span className="cart-item__meta">
+                            Name: {item.personalisation}
+                          </span>
+                          <div className="cart-item__letters" aria-label="Letter colours">
+                            {item.letterColors.map(({ letter, colorHex, colorName }, index) => (
+                              <span
+                                key={`${item.id}-${letter}-${index}`}
+                                className="cart-letter-chip"
+                                style={{
+                                  backgroundColor: colorHex,
+                                  color: isDarkColor(colorHex) ? '#FFFFFF' : '#3D3D3D',
+                                }}
+                                title={`${letter}: ${colorName}`}
+                              >
+                                {letter}
+                              </span>
+                            ))}
+                          </div>
+                          <span className="cart-item__meta cart-item__meta--letters">
+                            {item.letterColors
+                              .map(({ letter, colorName }) => `${letter}: ${colorName}`)
+                              .join(' · ')}
+                          </span>
+                        </>
+                      ) : (
+                        <span className="cart-item__meta">{item.colorName}</span>
+                      )}
                       {(item.optionLines ||
                         Object.entries(item.options).map(([k, v]) => ({
                           label: k,

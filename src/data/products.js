@@ -102,9 +102,12 @@ export const PRODUCTS = [
         choices: ['Vinyl', 'Natural wood'],
       },
     ],
-    personalisationLabel: 'Baby\'s name *',
-    personalisationPlaceholder: 'e.g. Emma Rose',
+    personalisationLabel: 'Name *',
+    personalisationPlaceholder: 'e.g. Lara',
     personalisationRequired: true,
+    perLetterColors: true,
+    perLetterColorsIntro:
+      'Each block is painted separately — pick a colour for every letter in the name.',
   },
   {
     id: 'wooden-letters',
@@ -150,9 +153,12 @@ export const PRODUCTS = [
         choices: ['Classic', 'Polka dot', 'Striped', 'Mixed (we\'ll confirm with you)'],
       },
     ],
-    personalisationLabel: 'Letters / name *',
-    personalisationPlaceholder: 'e.g. EMMA or Emma',
+    personalisationLabel: 'Name *',
+    personalisationPlaceholder: 'e.g. Lara',
     personalisationRequired: true,
+    perLetterColors: true,
+    perLetterColorsIntro:
+      'Each letter is painted separately — pick a colour for every letter in the name.',
   },
   {
     id: 'crochet-bunny',
