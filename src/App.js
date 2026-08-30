@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import './App.css';
 import Logo from './Images/logo.png';
-import { PRODUCTS, ORDER_EMAIL, BUSINESS, formatPrice, getProductImageForColor, getProductImageIndex } from './data/products';
+import { PRODUCTS, ORDER_EMAIL, BUSINESS, formatPrice, formatProductListPrice, getProductImageForColor, getProductImageIndex, COLLECT_LOCATION } from './data/products';
 import { sendOrderEmail, isValidEmail } from './utils/orderEmail';
+import { getCartTotal, formatCartItemPrice } from './utils/cartPricing';
 import { isOrderEmailConfigured } from './config/emailService';
 import LifestyleFlow, { LifestyleStrip } from './components/LifestyleFlow';
 import {
@@ -23,6 +24,9 @@ import RemoveIcon from '@mui/icons-material/Remove';
 import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import FavoriteIcon from '@mui/icons-material/Favorite';
+import StorefrontOutlinedIcon from '@mui/icons-material/StorefrontOutlined';
+import LocalShippingOutlinedIcon from '@mui/icons-material/LocalShippingOutlined';
+import PlaceOutlinedIcon from '@mui/icons-material/PlaceOutlined';
 
 const INFO_TABS = [
   { id: 'about', label: 'About us' },
@@ -44,6 +48,14 @@ function App() {
     name: '',
     email: '',
     phone: '',
+  });
+  const [fulfillment, setFulfillment] = useState({
+    method: 'collect',
+    streetAddress: '',
+    suburb: '',
+    city: '',
+    province: '',
+    postalCode: '',
   });
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
@@ -184,6 +196,9 @@ function App() {
       ? resolveLetterColors(selection.letterColors, selectedProduct.colors)
       : null;
 
+    const letterCount = letterColorDetails?.length ?? 0;
+    const pricePerLetter = selectedProduct.pricePerLetter ?? 0;
+
     const cartItem = {
       id: `${selectedProduct.id}-${Date.now()}`,
       productId: selectedProduct.id,
@@ -194,7 +209,9 @@ function App() {
             letterColorDetails[0]?.colorId ?? selectedColor.id
           )
         : getProductImageForColor(selectedProduct, selectedColor.id),
-      price: selectedProduct.priceOnRequest ? 0 : selectedProduct.price,
+      price: pricePerLetter || selectedProduct.price || 0,
+      pricePerLetter: pricePerLetter || null,
+      letterCount,
       priceOnRequest: !!selectedProduct.priceOnRequest,
       colorName: selectedProduct.perLetterColors
         ? formatLetterColorsSummary(letterColorDetails)
@@ -232,11 +249,11 @@ function App() {
     setCart((prev) => prev.filter((item) => item.id !== id));
   };
 
-  const cartTotal = cart.reduce(
-    (s, i) => s + (i.priceOnRequest ? 0 : i.price * i.quantity),
-    0
-  );
-  const hasPriceOnRequest = cart.some((i) => i.priceOnRequest);
+  const cartTotal = getCartTotal(cart);
+
+  const updateFulfillment = (field, value) => {
+    setFulfillment((current) => ({ ...current, [field]: value }));
+  };
 
   const placeOrder = async () => {
     if (!cart.length || isPlacingOrder) return;
@@ -253,13 +270,43 @@ function App() {
       setOrderError('Please enter a valid email address.');
       return;
     }
+    if (fulfillment.method === 'delivery') {
+      if (!fulfillment.streetAddress.trim()) {
+        setOrderError('Please enter your street address for courier delivery.');
+        return;
+      }
+      if (!fulfillment.city.trim()) {
+        setOrderError('Please enter your city for courier delivery.');
+        return;
+      }
+      if (!fulfillment.province.trim()) {
+        setOrderError('Please enter your province for courier delivery.');
+        return;
+      }
+      if (!fulfillment.postalCode.trim()) {
+        setOrderError('Please enter your postal code for courier delivery.');
+        return;
+      }
+    }
 
     setOrderError('');
     setIsPlacingOrder(true);
 
     const orderSnapshot = [...cart];
     const noteSnapshot = orderNote;
-    const customerSnapshot = { name, email, phone };
+    const customerSnapshot = {
+      name,
+      email,
+      phone,
+      fulfillment: {
+        method: fulfillment.method,
+        streetAddress: fulfillment.streetAddress.trim(),
+        suburb: fulfillment.suburb.trim(),
+        city: fulfillment.city.trim(),
+        province: fulfillment.province.trim(),
+        postalCode: fulfillment.postalCode.trim(),
+      },
+    };
 
     const result = await sendOrderEmail(
       orderSnapshot,
@@ -284,6 +331,14 @@ function App() {
     setCart([]);
     setOrderNote('');
     setCustomerDetails({ name: '', email: '', phone: '' });
+    setFulfillment({
+      method: 'collect',
+      streetAddress: '',
+      suburb: '',
+      city: '',
+      province: '',
+      postalCode: '',
+    });
     setCartOpen(false);
     setIsPlacingOrder(false);
 
@@ -433,9 +488,7 @@ function App() {
                     <p className="product-card__tagline">{product.tagline}</p>
                     <div className="product-card__footer">
                       <span className="product-card__price">
-                        {product.priceOnRequest
-                          ? 'Price on request'
-                          : `R${product.price}`}
+                        {formatProductListPrice(product)}
                       </span>
                       <span className="product-card__cta">View details</span>
                     </div>
@@ -614,15 +667,20 @@ function App() {
 
             <div className="product-modal__content">
               <h2 id="product-modal-title">{selectedProduct.name}</h2>
-              <p
-                className={
-                  selectedProduct.priceOnRequest
-                    ? 'product-modal__price product-modal__price--request'
-                    : 'product-modal__price'
-                }
-              >
-                {formatPrice(selectedProduct, selection.quantity)}
+              <p className="product-modal__price">
+                {selectedProduct.pricePerLetter
+                  ? nameLetters.length > 0
+                    ? formatPrice(selectedProduct, selection.quantity, nameLetters.length)
+                    : `R${selectedProduct.pricePerLetter} per letter`
+                  : formatPrice(selectedProduct, selection.quantity)}
               </p>
+              {selectedProduct.pricePerLetter && nameLetters.length > 0 && (
+                <p className="product-modal__price-note">
+                  {nameLetters.length} letter{nameLetters.length !== 1 ? 's' : ''} × R
+                  {selectedProduct.pricePerLetter}
+                  {selection.quantity > 1 ? ` × ${selection.quantity} sets` : ''}
+                </p>
+              )}
               <p className="product-modal__desc">{selectedProduct.description}</p>
 
               {selectedProduct.colors.length > 1 && !selectedProduct.perLetterColors && (
@@ -803,8 +861,13 @@ function App() {
                 }
               >
                 Add to bag
-                {!selectedProduct.priceOnRequest &&
-                  ` — R${selectedProduct.price * selection.quantity}`}
+                {selectedProduct.pricePerLetter
+                  ? nameLetters.length > 0
+                    ? ` — ${formatPrice(selectedProduct, selection.quantity, nameLetters.length)}`
+                    : ''
+                  : !selectedProduct.priceOnRequest
+                    ? ` — R${selectedProduct.price * selection.quantity}`
+                    : ''}
               </button>
             </div>
           </div>
@@ -922,9 +985,19 @@ function App() {
                             </button>
                           </div>
                           <span className="cart-item__price">
-                            {item.priceOnRequest
-                              ? 'Price on request'
-                              : `R${item.price * item.quantity}`}
+                            {(() => {
+                              const priced = formatCartItemPrice(item);
+                              return (
+                                <>
+                                  {priced.total}
+                                  {priced.detail && (
+                                    <small className="cart-item__price-detail">
+                                      {priced.detail}
+                                    </small>
+                                  )}
+                                </>
+                              );
+                            })()}
                           </span>
                         </div>
                       </div>
@@ -943,19 +1016,138 @@ function App() {
 
               <div className="cart-footer">
                 <div className="cart-total">
-                  <span>{hasPriceOnRequest ? 'Estimated total' : 'Total'}</span>
-                  <strong>
-                    {hasPriceOnRequest && cartTotal === 0
-                      ? 'Price on request'
-                      : `R${cartTotal}${hasPriceOnRequest ? '+' : ''}`}
-                  </strong>
+                  <span>Total</span>
+                  <strong>R{cartTotal}</strong>
                 </div>
-                {hasPriceOnRequest && (
-                  <p className="cart-footer__note" style={{ marginTop: 0 }}>
-                    Custom items are priced per order — we&apos;ll confirm the final
-                    amount when we reply to you.
-                  </p>
-                )}
+
+                <div className="fulfillment-section">
+                  <p className="cart-footer__heading">Collection or delivery</p>
+                  <div className="fulfillment-picker" role="radiogroup" aria-label="Collection or delivery">
+                    <button
+                      type="button"
+                      className={`fulfillment-option ${
+                        fulfillment.method === 'collect' ? 'fulfillment-option--active' : ''
+                      }`}
+                      onClick={() => updateFulfillment('method', 'collect')}
+                      aria-pressed={fulfillment.method === 'collect'}
+                    >
+                      <span className="fulfillment-option__icon">
+                        <StorefrontOutlinedIcon fontSize="small" />
+                      </span>
+                      <span className="fulfillment-option__copy">
+                        <strong>Collect</strong>
+                        <span>Pick up in person</span>
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      className={`fulfillment-option ${
+                        fulfillment.method === 'delivery' ? 'fulfillment-option--active' : ''
+                      }`}
+                      onClick={() => updateFulfillment('method', 'delivery')}
+                      aria-pressed={fulfillment.method === 'delivery'}
+                    >
+                      <span className="fulfillment-option__icon">
+                        <LocalShippingOutlinedIcon fontSize="small" />
+                      </span>
+                      <span className="fulfillment-option__copy">
+                        <strong>Courier delivery</strong>
+                        <span>We ship to your door</span>
+                      </span>
+                    </button>
+                  </div>
+
+                  {fulfillment.method === 'collect' ? (
+                    <div className="fulfillment-panel fulfillment-panel--collect">
+                      <PlaceOutlinedIcon className="fulfillment-panel__pin" fontSize="small" />
+                      <div>
+                        <p className="fulfillment-panel__title">Collection point</p>
+                        <p className="fulfillment-panel__location">{COLLECT_LOCATION}</p>
+                        <p className="fulfillment-panel__hint">
+                          We&apos;ll confirm collection times when we reply to your order.
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="fulfillment-panel fulfillment-panel--delivery">
+                      <p className="fulfillment-panel__title">Delivery address</p>
+                      <div className="fulfillment-fields">
+                        <div className="cart-field">
+                          <label className="cart-note-label" htmlFor="delivery-street">
+                            Street address *
+                          </label>
+                          <input
+                            id="delivery-street"
+                            type="text"
+                            className="option-input"
+                            placeholder="House number and street name"
+                            value={fulfillment.streetAddress}
+                            onChange={(e) => updateFulfillment('streetAddress', e.target.value)}
+                            autoComplete="street-address"
+                          />
+                        </div>
+                        <div className="cart-field">
+                          <label className="cart-note-label" htmlFor="delivery-suburb">
+                            Suburb / complex
+                          </label>
+                          <input
+                            id="delivery-suburb"
+                            type="text"
+                            className="option-input"
+                            placeholder="e.g. Durbanville Hills"
+                            value={fulfillment.suburb}
+                            onChange={(e) => updateFulfillment('suburb', e.target.value)}
+                            autoComplete="address-level3"
+                          />
+                        </div>
+                        <div className="fulfillment-fields__row">
+                          <div className="cart-field">
+                            <label className="cart-note-label" htmlFor="delivery-city">
+                              City *
+                            </label>
+                            <input
+                              id="delivery-city"
+                              type="text"
+                              className="option-input"
+                              placeholder="City"
+                              value={fulfillment.city}
+                              onChange={(e) => updateFulfillment('city', e.target.value)}
+                              autoComplete="address-level2"
+                            />
+                          </div>
+                          <div className="cart-field">
+                            <label className="cart-note-label" htmlFor="delivery-postal">
+                              Postal code *
+                            </label>
+                            <input
+                              id="delivery-postal"
+                              type="text"
+                              className="option-input"
+                              placeholder="7550"
+                              value={fulfillment.postalCode}
+                              onChange={(e) => updateFulfillment('postalCode', e.target.value)}
+                              autoComplete="postal-code"
+                            />
+                          </div>
+                        </div>
+                        <div className="cart-field">
+                          <label className="cart-note-label" htmlFor="delivery-province">
+                            Province *
+                          </label>
+                          <input
+                            id="delivery-province"
+                            type="text"
+                            className="option-input"
+                            placeholder="e.g. Western Cape"
+                            value={fulfillment.province}
+                            onChange={(e) => updateFulfillment('province', e.target.value)}
+                            autoComplete="address-level1"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
 
                 <p className="cart-footer__heading">Your details</p>
                 <div className="cart-customer-fields">
@@ -1015,7 +1207,7 @@ function App() {
                 <textarea
                   id="order-note"
                   className="cart-note-input"
-                  placeholder="Delivery address, gift message, colour tweaks…"
+                  placeholder="Gift message, colour tweaks, delivery notes…"
                   rows={3}
                   value={orderNote}
                   onChange={(e) => setOrderNote(e.target.value)}

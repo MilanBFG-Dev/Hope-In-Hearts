@@ -4,6 +4,8 @@ import {
   isOrderEmailConfigured,
   ORDER_INBOX,
 } from '../config/emailService';
+import { COLLECT_LOCATION } from '../data/products';
+import { getCartItemLineTotal, getCartTotal } from './cartPricing';
 
 export function generateOrderReference() {
   const stamp = Date.now().toString(36).toUpperCase();
@@ -24,14 +26,21 @@ function formatOrderDate() {
   });
 }
 
+function formatItemPriceLine(item) {
+  if (item.pricePerLetter && item.letterCount > 0) {
+    const total = getCartItemLineTotal(item);
+    const unitLabel = `${item.letterCount} letter${item.letterCount !== 1 ? 's' : ''} × R${item.pricePerLetter}`;
+    const qtyLabel = item.quantity > 1 ? ` × ${item.quantity} set${item.quantity !== 1 ? 's' : ''}` : '';
+    return `${formatMoney(total)} (${unitLabel}${qtyLabel})`;
+  }
+  if (item.priceOnRequest) return 'Price on request';
+  return formatMoney(getCartItemLineTotal(item));
+}
+
 function formatItemBlock(item, index) {
   const opts = (item.optionLines || []).map(({ label, value }) => `${label}: ${value}`);
-  const priceLine = item.priceOnRequest
-    ? 'Price on request'
-    : formatMoney(item.price * item.quantity);
-  const lines = [
-    `${index + 1}) ${item.name} ×${item.quantity} — ${priceLine}`,
-  ];
+  const priceLine = formatItemPriceLine(item);
+  const lines = [`${index + 1}) ${item.name} — ${priceLine}`];
 
   if (item.letterColors?.length) {
     lines.push(`   Name: "${item.personalisation || '—'}"`);
@@ -51,7 +60,31 @@ function formatItemBlock(item, index) {
   if (item.personalisation && !item.letterColors?.length) {
     lines.push(`   Text: "${item.personalisation}"`);
   }
+
   return lines.join('\n');
+}
+
+function formatFulfillmentBlock(fulfillment = {}) {
+  if (fulfillment.method === 'delivery') {
+    return [
+      'COLLECTION / DELIVERY',
+      'Method: Courier delivery',
+      `Street: ${fulfillment.streetAddress?.trim() || '—'}`,
+      fulfillment.suburb?.trim() ? `Suburb: ${fulfillment.suburb.trim()}` : null,
+      `City: ${fulfillment.city?.trim() || '—'}`,
+      `Province: ${fulfillment.province?.trim() || '—'}`,
+      `Postal code: ${fulfillment.postalCode?.trim() || '—'}`,
+    ]
+      .filter(Boolean)
+      .join('\n');
+  }
+
+  return [
+    'COLLECTION / DELIVERY',
+    'Method: Collect',
+    `Location: ${COLLECT_LOCATION}`,
+    'Customer will collect in person.',
+  ].join('\n');
 }
 
 /**
@@ -59,11 +92,7 @@ function formatItemBlock(item, index) {
  */
 export function buildOrderEmailContent(cart, orderNote = '', customer = {}, orderRef) {
   const ref = orderRef || generateOrderReference();
-  const total = cart.reduce(
-    (sum, item) => sum + (item.priceOnRequest ? 0 : item.price * item.quantity),
-    0
-  );
-  const hasCustomPricing = cart.some((item) => item.priceOnRequest);
+  const total = getCartTotal(cart);
   const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
   const dateStr = formatOrderDate();
   const phone = customer.phone?.trim() || '—';
@@ -77,14 +106,18 @@ export function buildOrderEmailContent(cart, orderNote = '', customer = {}, orde
     `Email: ${customer.email || '—'}`,
     `Phone: ${phone}`,
     '',
+    formatFulfillmentBlock(customer.fulfillment),
+    '',
     'ITEMS',
     ...cart.map((item, i) => formatItemBlock(item, i)),
     '',
-    `TOTAL: ${hasCustomPricing ? `${formatMoney(total)}+ (custom items priced separately)` : formatMoney(total)} (${itemCount} item${itemCount !== 1 ? 's' : ''})`,
+    `TOTAL: ${formatMoney(total)} (${itemCount} item${itemCount !== 1 ? 's' : ''})`,
     orderNote.trim() ? `\nNOTES\n${orderNote.trim()}` : null,
     '',
     '—',
-    'Reply to customer to confirm payment & delivery.',
+    customer.fulfillment?.method === 'delivery'
+      ? 'Reply to customer to confirm payment, courier cost and delivery.'
+      : 'Reply to customer to confirm payment and collection time.',
   ]
     .filter((line) => line !== null)
     .join('\n');

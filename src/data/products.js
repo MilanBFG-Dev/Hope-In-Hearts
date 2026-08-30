@@ -47,6 +47,32 @@ const ALL_COLOURS = COLOUR_PALETTE;
 const CROCHET_BUNNY_COLOURS = COLOUR_PALETTE.slice(0, 3);
 const RATTLE_COLOURS = [COLOUR_PALETTE[2], COLOUR_PALETTE[4]];
 
+export const PRICE_PER_LETTER = 50;
+export const COLLECT_LOCATION = 'Durbanville, Cape Town';
+
+export function getProductLetterCount(product, personalisation = '') {
+  if (!product?.pricePerLetter) return 0;
+  return personalisation
+    .toUpperCase()
+    .replace(/[^A-Z]/g, '')
+    .length;
+}
+
+export function formatPrice(product, quantity = 1, letterCount = 0) {
+  if (product.pricePerLetter) {
+    const count = Math.max(letterCount, 1);
+    return `R${product.pricePerLetter * count * quantity}`;
+  }
+  if (product.priceOnRequest) return 'Price on request';
+  return `R${product.price * quantity}`;
+}
+
+export function formatProductListPrice(product) {
+  if (product.pricePerLetter) return `R${product.pricePerLetter} per letter`;
+  if (product.priceOnRequest) return 'Price on request';
+  return `R${product.price}`;
+}
+
 export function getProductImageForColor(product, colorId) {
   if (!product) return null;
   if (colorId && product.colorImages?.[colorId]) return product.colorImages[colorId];
@@ -63,10 +89,10 @@ export const PRODUCTS = [
   {
     id: 'name-blocks',
     name: 'Personalised Wooden Name Blocks',
-    priceOnRequest: true,
+    pricePerLetter: PRICE_PER_LETTER,
     tagline: 'Hand-painted keepsake blocks',
     description:
-      'Create a beautiful, one-of-a-kind keepsake with our personalised wooden name blocks. Thoughtfully handcrafted and painted in your choice of soft, timeless colours — the perfect finishing touch for a nursery, child\'s bedroom, or playroom. Each block measures 6 × 6 cm. Each set is handmade to order.',
+      'Create a beautiful, one-of-a-kind keepsake with our personalised wooden name blocks. Thoughtfully handcrafted and painted in your choice of soft, timeless colours — the perfect finishing touch for a nursery, child\'s bedroom, or playroom. Each block measures 6 × 6 cm. R50 per letter — each set is handmade to order.',
     image: nameBlocksLara,
     images: [
       nameBlocksLara,
@@ -112,10 +138,10 @@ export const PRODUCTS = [
   {
     id: 'wooden-letters',
     name: 'Personalised Wooden Name Letters',
-    priceOnRequest: true,
+    pricePerLetter: PRICE_PER_LETTER,
     tagline: 'Spell their name in style',
     description:
-      'Create a space that\'s uniquely theirs with our handcrafted personalised wooden name letters. Perfect for spelling out your child\'s name above a bed, cot, or bedroom door. Each letter is individually painted in your choice of colours and designs. Available in Large (11 cm) or Small (7.5 cm). Each letter is handmade to order.',
+      'Create a space that\'s uniquely theirs with our handcrafted personalised wooden name letters. Perfect for spelling out your child\'s name above a bed, cot, or bedroom door. Each letter is individually painted in your choice of colours and designs. Available in Large (11 cm) or Small (7.5 cm). R50 per letter — each set is handmade to order.',
     image: woodenLettersBaby,
     images: [
       woodenLettersBaby,
@@ -247,8 +273,3 @@ export const BUSINESS = {
 
 /** All orders are sent to this inbox */
 export const ORDER_EMAIL = BUSINESS.email;
-
-export function formatPrice(product, quantity = 1) {
-  if (product.priceOnRequest) return 'Price on request';
-  return `R${product.price * quantity}`;
-}
