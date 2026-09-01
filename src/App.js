@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import './App.css';
 import Logo from './Images/logo.png';
-import { PRODUCTS, ORDER_EMAIL, BUSINESS, formatPrice, formatProductListPrice, getProductImageForColor, getProductImageIndex, COLLECT_LOCATION } from './data/products';
+import { PRODUCTS, ORDER_EMAIL, BUSINESS, formatPrice, formatProductListPrice, getProductImageForColor, getProductImageIndex, COLLECT_LOCATION, COURIER_FEE, EXTRA_BLOCK_MOTIFS, EXTRA_BLOCK_SYMBOLS } from './data/products';
 import { sendOrderEmail, isValidEmail } from './utils/orderEmail';
-import { getCartTotal, formatCartItemPrice } from './utils/cartPricing';
+import { getCartTotal, formatCartItemPrice, getDeliveryFee, getOrderTotal } from './utils/cartPricing';
 import { isOrderEmailConfigured } from './config/emailService';
 import LifestyleFlow, { LifestyleStrip } from './components/LifestyleFlow';
 import {
@@ -11,6 +11,7 @@ import {
   syncLetterColors,
   resolveLetterColors,
   formatLetterColorsSummary,
+  resolveExtraBlocks,
   isDarkColor,
 } from './utils/letterColors';
 
@@ -67,6 +68,7 @@ function App() {
     quantity: 1,
     personalisation: '',
     letterColors: [],
+    extraBlocks: [],
   });
   const [modalImageIndex, setModalImageIndex] = useState(0);
 
@@ -84,6 +86,7 @@ function App() {
       quantity: 1,
       personalisation: '',
       letterColors: [],
+      extraBlocks: [],
     });
     setModalImageIndex(getProductImageIndex(product, defaultColor.id));
     setSelectedProduct(product);
@@ -175,10 +178,56 @@ function App() {
     }
   };
 
+  const resolvedExtraBlocks = selectedProduct?.allowExtraBlocks
+    ? resolveExtraBlocks(selection.extraBlocks, selectedProduct.colors)
+    : [];
+
+  const pricedUnitCount = nameLetters.length + resolvedExtraBlocks.length;
+
+  const addExtraBlock = () => {
+    setSelection((s) => ({
+      ...s,
+      extraBlocks: [
+        ...(s.extraBlocks || []),
+        {
+          motif: EXTRA_BLOCK_MOTIFS[0],
+          colorId: selectedProduct?.colors[0]?.id,
+          otherNote: '',
+        },
+      ],
+    }));
+    if (selectedProduct?.extraBlockImage) {
+      const extraIndex = selectedProduct.images?.indexOf(selectedProduct.extraBlockImage);
+      if (extraIndex >= 0) setModalImageIndex(extraIndex);
+    }
+  };
+
+  const updateExtraBlock = (index, field, value) => {
+    setSelection((s) => ({
+      ...s,
+      extraBlocks: (s.extraBlocks || []).map((block, i) =>
+        i === index ? { ...block, [field]: value } : block
+      ),
+    }));
+  };
+
+  const removeExtraBlock = (index) => {
+    setSelection((s) => ({
+      ...s,
+      extraBlocks: (s.extraBlocks || []).filter((_, i) => i !== index),
+    }));
+  };
+
   const letterColorsComplete =
     !selectedProduct?.perLetterColors ||
     (nameLetters.length > 0 &&
       selection.letterColors.length === nameLetters.length);
+
+  const extraBlocksComplete =
+    !selectedProduct?.allowExtraBlocks ||
+    resolvedExtraBlocks.every(
+      (block) => block.motif !== 'Other' || block.otherNote.trim()
+    );
 
   const addToCart = () => {
     if (!selectedProduct || !selectedColor) return;
@@ -191,10 +240,16 @@ function App() {
     if (selectedProduct.perLetterColors && !letterColorsComplete) {
       return;
     }
+    if (selectedProduct.allowExtraBlocks && !extraBlocksComplete) {
+      return;
+    }
 
     const letterColorDetails = selectedProduct.perLetterColors
       ? resolveLetterColors(selection.letterColors, selectedProduct.colors)
       : null;
+    const extraBlockDetails = selectedProduct.allowExtraBlocks
+      ? resolveExtraBlocks(selection.extraBlocks, selectedProduct.colors)
+      : [];
 
     const letterCount = letterColorDetails?.length ?? 0;
     const pricePerLetter = selectedProduct.pricePerLetter ?? 0;
@@ -203,15 +258,19 @@ function App() {
       id: `${selectedProduct.id}-${Date.now()}`,
       productId: selectedProduct.id,
       name: selectedProduct.name,
-      image: selectedProduct.perLetterColors
-        ? getProductImageForColor(
-            selectedProduct,
-            letterColorDetails[0]?.colorId ?? selectedColor.id
-          )
-        : getProductImageForColor(selectedProduct, selectedColor.id),
+      image:
+        extraBlockDetails.length > 0 && selectedProduct.extraBlockImage
+          ? selectedProduct.extraBlockImage
+          : selectedProduct.perLetterColors
+            ? getProductImageForColor(
+                selectedProduct,
+                letterColorDetails[0]?.colorId ?? selectedColor.id
+              )
+            : getProductImageForColor(selectedProduct, selectedColor.id),
       price: pricePerLetter || selectedProduct.price || 0,
       pricePerLetter: pricePerLetter || null,
       letterCount,
+      extraBlocks: extraBlockDetails,
       priceOnRequest: !!selectedProduct.priceOnRequest,
       colorName: selectedProduct.perLetterColors
         ? formatLetterColorsSummary(letterColorDetails)
@@ -249,7 +308,9 @@ function App() {
     setCart((prev) => prev.filter((item) => item.id !== id));
   };
 
-  const cartTotal = getCartTotal(cart);
+  const cartSubtotal = getCartTotal(cart);
+  const deliveryFee = getDeliveryFee(fulfillment.method);
+  const cartTotal = getOrderTotal(cart, fulfillment.method);
 
   const updateFulfillment = (field, value) => {
     setFulfillment((current) => ({ ...current, [field]: value }));
@@ -669,15 +730,21 @@ function App() {
               <h2 id="product-modal-title">{selectedProduct.name}</h2>
               <p className="product-modal__price">
                 {selectedProduct.pricePerLetter
-                  ? nameLetters.length > 0
-                    ? formatPrice(selectedProduct, selection.quantity, nameLetters.length)
+                  ? pricedUnitCount > 0
+                    ? formatPrice(selectedProduct, selection.quantity, pricedUnitCount)
                     : `R${selectedProduct.pricePerLetter} per letter`
                   : formatPrice(selectedProduct, selection.quantity)}
               </p>
-              {selectedProduct.pricePerLetter && nameLetters.length > 0 && (
+              {selectedProduct.pricePerLetter && pricedUnitCount > 0 && (
                 <p className="product-modal__price-note">
-                  {nameLetters.length} letter{nameLetters.length !== 1 ? 's' : ''} × R
-                  {selectedProduct.pricePerLetter}
+                  {nameLetters.length > 0
+                    ? `${nameLetters.length} letter${nameLetters.length !== 1 ? 's' : ''}`
+                    : null}
+                  {nameLetters.length > 0 && resolvedExtraBlocks.length > 0 ? ' + ' : ''}
+                  {resolvedExtraBlocks.length > 0
+                    ? `${resolvedExtraBlocks.length} extra block${resolvedExtraBlocks.length !== 1 ? 's' : ''}`
+                    : ''}
+                  {` × R${selectedProduct.pricePerLetter}`}
                   {selection.quantity > 1 ? ` × ${selection.quantity} sets` : ''}
                 </p>
               )}
@@ -820,6 +887,108 @@ function App() {
                 </div>
               )}
 
+              {selectedProduct.allowExtraBlocks && (
+                <div className="extra-blocks">
+                  <div className="extra-blocks__header">
+                    <div>
+                      <p className="option-label extra-blocks__label">Extra design blocks</p>
+                      <p className="extra-blocks__intro">
+                        Add a blank block with a heart, flower, star, car, or another design —
+                        R{selectedProduct.pricePerLetter} each, same colours as the letters.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      className="extra-blocks__add"
+                      onClick={addExtraBlock}
+                    >
+                      + Add block
+                    </button>
+                  </div>
+
+                  {resolvedExtraBlocks.length === 0 ? (
+                    <p className="extra-blocks__empty">No extra blocks yet — optional.</p>
+                  ) : (
+                    <div className="extra-blocks__list">
+                      {resolvedExtraBlocks.map((block, index) => (
+                        <div className="extra-block-card" key={`extra-${index}`}>
+                          <span
+                            className="extra-block-card__badge"
+                            style={{
+                              backgroundColor: block.colorHex,
+                              color: isDarkColor(block.colorHex) ? '#FFFFFF' : '#3D3D3D',
+                            }}
+                          >
+                            {EXTRA_BLOCK_SYMBOLS[block.motif] || '+'}
+                          </span>
+                          <div className="extra-block-card__body">
+                            <div className="extra-block-card__top">
+                              <span className="extra-block-card__title">
+                                Extra block {index + 1}
+                              </span>
+                              <button
+                                type="button"
+                                className="extra-block-card__remove"
+                                onClick={() => removeExtraBlock(index)}
+                                aria-label={`Remove extra block ${index + 1}`}
+                              >
+                                Remove
+                              </button>
+                            </div>
+                            <div className="motif-picker" role="group" aria-label="Block design">
+                              {EXTRA_BLOCK_MOTIFS.map((motif) => (
+                                <button
+                                  key={motif}
+                                  type="button"
+                                  className={`motif-chip ${
+                                    block.motif === motif ? 'motif-chip--active' : ''
+                                  }`}
+                                  onClick={() => updateExtraBlock(index, 'motif', motif)}
+                                >
+                                  <span className="motif-chip__symbol">
+                                    {EXTRA_BLOCK_SYMBOLS[motif]}
+                                  </span>
+                                  {motif}
+                                </button>
+                              ))}
+                            </div>
+                            {block.motif === 'Other' && (
+                              <input
+                                type="text"
+                                className="option-input extra-block-card__other"
+                                placeholder="Describe the design, e.g. moon"
+                                value={block.otherNote}
+                                onChange={(e) =>
+                                  updateExtraBlock(index, 'otherNote', e.target.value)
+                                }
+                              />
+                            )}
+                            <span className="letter-color-row__label">
+                              Colour · {block.colorName}
+                            </span>
+                            <div className="color-picker color-picker--compact">
+                              {selectedProduct.colors.map((c) => (
+                                <button
+                                  key={c.id}
+                                  type="button"
+                                  className={`color-swatch ${
+                                    block.colorId === c.id ? 'color-swatch--active' : ''
+                                  } ${c.id === 'white' ? 'color-swatch--white' : ''}`}
+                                  style={{ backgroundColor: c.hex }}
+                                  onClick={() => updateExtraBlock(index, 'colorId', c.id)}
+                                  aria-label={`${block.motif} — ${c.name}`}
+                                  title={c.name}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="option-group quantity-row">
                 <span className="option-label">Quantity</span>
                 <div className="quantity-control">
@@ -857,13 +1026,14 @@ function App() {
                 disabled={
                   (selectedProduct.personalisationRequired &&
                     !selection.personalisation.trim()) ||
-                  !letterColorsComplete
+                  !letterColorsComplete ||
+                  !extraBlocksComplete
                 }
               >
                 Add to bag
                 {selectedProduct.pricePerLetter
-                  ? nameLetters.length > 0
-                    ? ` — ${formatPrice(selectedProduct, selection.quantity, nameLetters.length)}`
+                  ? pricedUnitCount > 0
+                    ? ` — ${formatPrice(selectedProduct, selection.quantity, pricedUnitCount)}`
                     : ''
                   : !selectedProduct.priceOnRequest
                     ? ` — R${selectedProduct.price * selection.quantity}`
@@ -949,6 +1119,37 @@ function App() {
                         ) : (
                           <span className="cart-item__meta">{item.colorName}</span>
                         )}
+                        {item.extraBlocks?.length > 0 && (
+                          <>
+                            <div className="cart-item__letters" aria-label="Extra blocks">
+                              {item.extraBlocks.map((block, index) => (
+                                <span
+                                  key={`${item.id}-extra-${index}`}
+                                  className="cart-letter-chip"
+                                  style={{
+                                    backgroundColor: block.colorHex,
+                                    color: isDarkColor(block.colorHex) ? '#FFFFFF' : '#3D3D3D',
+                                  }}
+                                  title={`${block.motif}: ${block.colorName}`}
+                                >
+                                  {EXTRA_BLOCK_SYMBOLS[block.motif] || '+'}
+                                </span>
+                              ))}
+                            </div>
+                            <span className="cart-item__meta cart-item__meta--letters">
+                              Extra:{' '}
+                              {item.extraBlocks
+                                .map((block) => {
+                                  const motif =
+                                    block.motif === 'Other' && block.otherNote?.trim()
+                                      ? `Other (${block.otherNote.trim()})`
+                                      : block.motif;
+                                  return `${motif}: ${block.colorName}`;
+                                })
+                                .join(' · ')}
+                            </span>
+                          </>
+                        )}
                         {(item.optionLines ||
                           Object.entries(item.options).map(([k, v]) => ({
                             label: k,
@@ -1015,9 +1216,19 @@ function App() {
               </div>
 
               <div className="cart-footer">
-                <div className="cart-total">
-                  <span>Total</span>
-                  <strong>R{cartTotal}</strong>
+                <div className="cart-totals">
+                  <div className="cart-totals__row">
+                    <span>Subtotal</span>
+                    <span>R{cartSubtotal}</span>
+                  </div>
+                  <div className="cart-totals__row">
+                    <span>Courier</span>
+                    <span>{deliveryFee > 0 ? `R${deliveryFee}` : 'Free (collect)'}</span>
+                  </div>
+                  <div className="cart-total">
+                    <span>Total</span>
+                    <strong>R{cartTotal}</strong>
+                  </div>
                 </div>
 
                 <div className="fulfillment-section">
@@ -1036,7 +1247,7 @@ function App() {
                       </span>
                       <span className="fulfillment-option__copy">
                         <strong>Collect</strong>
-                        <span>Pick up in person</span>
+                        <span>Free pickup</span>
                       </span>
                     </button>
                     <button
@@ -1052,7 +1263,7 @@ function App() {
                       </span>
                       <span className="fulfillment-option__copy">
                         <strong>Courier delivery</strong>
-                        <span>We ship to your door</span>
+                        <span>R{COURIER_FEE} nationwide</span>
                       </span>
                     </button>
                   </div>
@@ -1071,6 +1282,9 @@ function App() {
                   ) : (
                     <div className="fulfillment-panel fulfillment-panel--delivery">
                       <p className="fulfillment-panel__title">Delivery address</p>
+                      <p className="fulfillment-panel__hint" style={{ marginBottom: '0.75rem' }}>
+                        Courier is R{COURIER_FEE} and is added to your total below.
+                      </p>
                       <div className="fulfillment-fields">
                         <div className="cart-field">
                           <label className="cart-note-label" htmlFor="delivery-street">

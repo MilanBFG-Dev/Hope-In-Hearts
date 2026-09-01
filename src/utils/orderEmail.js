@@ -4,8 +4,8 @@ import {
   isOrderEmailConfigured,
   ORDER_INBOX,
 } from '../config/emailService';
-import { COLLECT_LOCATION } from '../data/products';
-import { getCartItemLineTotal, getCartTotal } from './cartPricing';
+import { COLLECT_LOCATION, COURIER_FEE } from '../data/products';
+import { getCartItemLineTotal, getCartTotal, getDeliveryFee, getOrderTotal } from './cartPricing';
 
 export function generateOrderReference() {
   const stamp = Date.now().toString(36).toUpperCase();
@@ -27,11 +27,23 @@ function formatOrderDate() {
 }
 
 function formatItemPriceLine(item) {
-  if (item.pricePerLetter && item.letterCount > 0) {
+  if (item.pricePerLetter) {
     const total = getCartItemLineTotal(item);
-    const unitLabel = `${item.letterCount} letter${item.letterCount !== 1 ? 's' : ''} × R${item.pricePerLetter}`;
+    const letterCount = item.letterCount || 0;
+    const extraCount = item.extraBlocks?.length || 0;
+    const parts = [];
+    if (letterCount > 0) {
+      parts.push(
+        `${letterCount} letter${letterCount !== 1 ? 's' : ''} × R${item.pricePerLetter}`
+      );
+    }
+    if (extraCount > 0) {
+      parts.push(
+        `${extraCount} extra block${extraCount !== 1 ? 's' : ''} × R${item.pricePerLetter}`
+      );
+    }
     const qtyLabel = item.quantity > 1 ? ` × ${item.quantity} set${item.quantity !== 1 ? 's' : ''}` : '';
-    return `${formatMoney(total)} (${unitLabel}${qtyLabel})`;
+    return `${formatMoney(total)}${parts.length ? ` (${parts.join(' + ')}${qtyLabel})` : ''}`;
   }
   if (item.priceOnRequest) return 'Price on request';
   return formatMoney(getCartItemLineTotal(item));
@@ -53,6 +65,20 @@ function formatItemBlock(item, index) {
     lines.push(`   ${item.colorName}${opts.length ? ' | ' + opts.join(' | ') : ''}`);
   }
 
+  if (item.extraBlocks?.length) {
+    lines.push(
+      `   Extra blocks: ${item.extraBlocks
+        .map((block) => {
+          const motif =
+            block.motif === 'Other' && block.otherNote?.trim()
+              ? `Other (${block.otherNote.trim()})`
+              : block.motif;
+          return `${motif}=${block.colorName}`;
+        })
+        .join(', ')}`
+    );
+  }
+
   if (opts.length && item.letterColors?.length) {
     lines.push(`   ${opts.join(' | ')}`);
   }
@@ -69,6 +95,7 @@ function formatFulfillmentBlock(fulfillment = {}) {
     return [
       'COLLECTION / DELIVERY',
       'Method: Courier delivery',
+      `Courier fee: R${COURIER_FEE}`,
       `Street: ${fulfillment.streetAddress?.trim() || '—'}`,
       fulfillment.suburb?.trim() ? `Suburb: ${fulfillment.suburb.trim()}` : null,
       `City: ${fulfillment.city?.trim() || '—'}`,
@@ -92,7 +119,9 @@ function formatFulfillmentBlock(fulfillment = {}) {
  */
 export function buildOrderEmailContent(cart, orderNote = '', customer = {}, orderRef) {
   const ref = orderRef || generateOrderReference();
-  const total = getCartTotal(cart);
+  const subtotal = getCartTotal(cart);
+  const deliveryFee = getDeliveryFee(customer.fulfillment?.method);
+  const total = getOrderTotal(cart, customer.fulfillment?.method);
   const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
   const dateStr = formatOrderDate();
   const phone = customer.phone?.trim() || '—';
@@ -111,12 +140,14 @@ export function buildOrderEmailContent(cart, orderNote = '', customer = {}, orde
     'ITEMS',
     ...cart.map((item, i) => formatItemBlock(item, i)),
     '',
+    `SUBTOTAL: ${formatMoney(subtotal)}`,
+    deliveryFee > 0 ? `COURIER: ${formatMoney(deliveryFee)}` : 'COURIER: R0 (collect)',
     `TOTAL: ${formatMoney(total)} (${itemCount} item${itemCount !== 1 ? 's' : ''})`,
     orderNote.trim() ? `\nNOTES\n${orderNote.trim()}` : null,
     '',
     '—',
     customer.fulfillment?.method === 'delivery'
-      ? 'Reply to customer to confirm payment, courier cost and delivery.'
+      ? 'Reply to customer to confirm payment and courier delivery.'
       : 'Reply to customer to confirm payment and collection time.',
   ]
     .filter((line) => line !== null)

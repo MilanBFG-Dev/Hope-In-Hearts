@@ -28,6 +28,31 @@ export function formatLetterColorsSummary(letterColors) {
   return letterColors.map(({ letter, colorName }) => `${letter}: ${colorName}`).join(' · ');
 }
 
+export function resolveExtraBlocks(extraBlocks = [], palette = []) {
+  return extraBlocks.map((block) => {
+    const color = palette.find((c) => c.id === block.colorId) ?? palette[0];
+    return {
+      motif: block.motif || 'Heart',
+      otherNote: block.otherNote || '',
+      colorId: color?.id,
+      colorName: color?.name,
+      colorHex: color?.hex,
+    };
+  });
+}
+
+export function formatExtraBlocksSummary(extraBlocks = []) {
+  return extraBlocks
+    .map((block) => {
+      const motif =
+        block.motif === 'Other' && block.otherNote?.trim()
+          ? `Other (${block.otherNote.trim()})`
+          : block.motif;
+      return `${motif}: ${block.colorName}`;
+    })
+    .join(' · ');
+}
+
 export function isDarkColor(hex) {
   const value = hex.replace('#', '');
   const r = parseInt(value.slice(0, 2), 16);

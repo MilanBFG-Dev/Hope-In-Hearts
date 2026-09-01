@@ -24,6 +24,7 @@ import woodenLettersSizes from '../Images/products/image23.png';
 import woodenLettersAbcd from '../Images/products/image24.png';
 import woodenLettersBabyNames from '../Images/products/image25.png';
 import woodenLettersPatterns from '../Images/products/image26.png';
+import extraNameBlocks from '../Images/products/image27.jpg';
 
 /** Hope in Hearts colour palette — from official colour chart */
 export const COLOUR_PALETTE = [
@@ -48,7 +49,16 @@ const CROCHET_BUNNY_COLOURS = COLOUR_PALETTE.slice(0, 3);
 const RATTLE_COLOURS = [COLOUR_PALETTE[2], COLOUR_PALETTE[4]];
 
 export const PRICE_PER_LETTER = 50;
+export const COURIER_FEE = 95;
 export const COLLECT_LOCATION = 'Durbanville, Cape Town';
+export const EXTRA_BLOCK_MOTIFS = ['Heart', 'Flower', 'Star', 'Car', 'Other'];
+export const EXTRA_BLOCK_SYMBOLS = {
+  Heart: '♥',
+  Flower: '✿',
+  Star: '★',
+  Car: 'C',
+  Other: '+',
+};
 
 export function getProductLetterCount(product, personalisation = '') {
   if (!product?.pricePerLetter) return 0;
@@ -60,15 +70,19 @@ export function getProductLetterCount(product, personalisation = '') {
 
 export function formatPrice(product, quantity = 1, letterCount = 0) {
   if (product.pricePerLetter) {
-    const count = Math.max(letterCount, 1);
-    return `R${product.pricePerLetter * count * quantity}`;
+    if (letterCount <= 0) return `R${product.pricePerLetter} per letter`;
+    return `R${product.pricePerLetter * letterCount * quantity}`;
   }
   if (product.priceOnRequest) return 'Price on request';
   return `R${product.price * quantity}`;
 }
 
 export function formatProductListPrice(product) {
-  if (product.pricePerLetter) return `R${product.pricePerLetter} per letter`;
+  if (product.pricePerLetter) {
+    return product.allowExtraBlocks
+      ? `R${product.pricePerLetter} per letter / extra block`
+      : `R${product.pricePerLetter} per letter`;
+  }
   if (product.priceOnRequest) return 'Price on request';
   return `R${product.price}`;
 }
@@ -92,10 +106,12 @@ export const PRODUCTS = [
     pricePerLetter: PRICE_PER_LETTER,
     tagline: 'Hand-painted keepsake blocks',
     description:
-      'Create a beautiful, one-of-a-kind keepsake with our personalised wooden name blocks. Thoughtfully handcrafted and painted in your choice of soft, timeless colours — the perfect finishing touch for a nursery, child\'s bedroom, or playroom. Each block measures 6 × 6 cm. R50 per letter — each set is handmade to order.',
+      'Create a beautiful, one-of-a-kind keepsake with our personalised wooden name blocks. Thoughtfully handcrafted and painted in your choice of soft, timeless colours — the perfect finishing touch for a nursery, child\'s bedroom, or playroom. Each block measures 6 × 6 cm. R50 per letter or extra design block (heart, flower, star, car, or other) — each set is handmade to order.',
     image: nameBlocksLara,
+    extraBlockImage: extraNameBlocks,
     images: [
       nameBlocksLara,
+      extraNameBlocks,
       nameBlocksSage,
       nameBlocksFinn,
       nameBlocksSageLeaf,
@@ -134,6 +150,7 @@ export const PRODUCTS = [
     perLetterColors: true,
     perLetterColorsIntro:
       'Each block is painted separately — pick a colour for every letter in the name.',
+    allowExtraBlocks: true,
   },
   {
     id: 'wooden-letters',
